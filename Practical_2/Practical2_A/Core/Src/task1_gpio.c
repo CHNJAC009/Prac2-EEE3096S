@@ -16,16 +16,16 @@
 #include "prac2a.h"
 
 /* TODO 1.1  Peripheral base addresses: the memory map in RM0091 section 2. */
-#define RCC_BASE_ADDR       0x00000000UL    /* <- TODO */
-#define GPIOC_BASE_ADDR     0x00000000UL    /* <- TODO */
+#define RCC_BASE_ADDR       0x40021000UL    /* <- TODO */
+#define GPIOC_BASE_ADDR     0x48000800UL    /* <- TODO */
 
 /* TODO 1.2  Register offsets: the register map at the end of the RCC chapter
  *           and of the GPIO chapter of RM0091. */
-#define RCC_AHBENR_OFFSET   0x00UL          /* <- TODO */
+#define RCC_AHBENR_OFFSET   0x14UL          /* <- TODO */
 #define GPIO_MODER_OFFSET   0x00UL          /* <- TODO */
-#define GPIO_ODR_OFFSET     0x00UL          /* <- TODO */
-#define GPIO_BSRR_OFFSET    0x00UL          /* <- TODO */
-#define GPIO_BRR_OFFSET     0x00UL          /* <- TODO */
+#define GPIO_ODR_OFFSET     0x14UL          /* <- TODO */
+#define GPIO_BSRR_OFFSET    0x18UL          /* <- TODO */
+#define GPIO_BRR_OFFSET     0x28UL          /* <- TODO */
 
 /* One pointer is declared for you to show the pattern. Be ready to explain
  * what `volatile` does here, and what can go wrong without it.
@@ -33,6 +33,14 @@
  * TODO 1.3  Declare pointers for the GPIOC registers you use, the same way. */
 static volatile uint32_t * const pRCC_AHBENR =
         (volatile uint32_t *)(RCC_BASE_ADDR + RCC_AHBENR_OFFSET);
+static volatile uint32_t * const pGPIO_MODER =
+        (volatile uint32_t *)(GPIOC_BASE_ADDR + GPIO_MODER_OFFSET);
+static volatile uint32_t * const pGPIO_ODR =
+        (volatile uint32_t *)(GPIOC_BASE_ADDR + GPIO_ODR_OFFSET);
+static volatile uint32_t * const pGPIO_BSRR =
+        (volatile uint32_t *)(GPIOC_BASE_ADDR + GPIO_BSRR_OFFSET);
+static volatile uint32_t * const pGPIO_BRR =
+        (volatile uint32_t *)(GPIOC_BASE_ADDR + GPIO_BRR_OFFSET);
 
 /* TODO 1.4  Once TODO 1.1 and 1.2 are done, UNCOMMENT these checks. They
  *           compare your addresses with the CMSIS device header, so a wrong
