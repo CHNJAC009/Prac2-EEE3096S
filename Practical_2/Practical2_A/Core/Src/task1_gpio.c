@@ -33,12 +33,16 @@
  * TODO 1.3  Declare pointers for the GPIOC registers you use, the same way. */
 static volatile uint32_t * const pRCC_AHBENR =
         (volatile uint32_t *)(RCC_BASE_ADDR + RCC_AHBENR_OFFSET);
+
 static volatile uint32_t * const pGPIO_MODER =
         (volatile uint32_t *)(GPIOC_BASE_ADDR + GPIO_MODER_OFFSET);
+
 static volatile uint32_t * const pGPIO_ODR =
         (volatile uint32_t *)(GPIOC_BASE_ADDR + GPIO_ODR_OFFSET);
+
 static volatile uint32_t * const pGPIO_BSRR =
         (volatile uint32_t *)(GPIOC_BASE_ADDR + GPIO_BSRR_OFFSET);
+
 static volatile uint32_t * const pGPIO_BRR =
         (volatile uint32_t *)(GPIOC_BASE_ADDR + GPIO_BRR_OFFSET);
 
@@ -48,7 +52,7 @@ static volatile uint32_t * const pGPIO_BRR =
  *           address - do not edit the right-hand side.
  *           (They are commented out only so the project builds before you
  *           start, letting you check your toolchain first.)
- *
+ */
 _Static_assert(RCC_BASE_ADDR   == RCC_BASE,   "RCC base mismatch");
 _Static_assert(GPIOC_BASE_ADDR == GPIOC_BASE, "GPIOC base mismatch");
 _Static_assert(RCC_BASE_ADDR + RCC_AHBENR_OFFSET
@@ -61,7 +65,7 @@ _Static_assert(GPIOC_BASE_ADDR + GPIO_BSRR_OFFSET
                == (uint32_t)(uintptr_t)&GPIOC->BSRR,  "BSRR offset");
 _Static_assert(GPIOC_BASE_ADDR + GPIO_BRR_OFFSET
                == (uint32_t)(uintptr_t)&GPIOC->BRR,   "BRR offset");
-*/
+
 
 volatile uint32_t task1_half_period_ms = 5u;
 volatile uint32_t task1_toggle_count   = 0u;
@@ -75,11 +79,18 @@ void task1_gpio_init(void)
      *           enabled are kept. Be ready to explain what the board does if
      *           you forget this. */
 
+    // set the IOPCEN bit using read modify write with "|=" operation
+    *pRCC_AHBENR |= (1UL << 19); // same as RCC_AHBENR_GPIOCEN;
+
     /* TODO 1.6  Put PC13 into general purpose output mode. MODER has two bits
      *           per pin: clear both of PC13's bits, then set the output value,
      *           leaving every other pin unchanged. */
 
+    *pGPIO_MODER &= ~(3 << 26); //Base of PC13 is 26, use &= to clear bits
+    *pGPIO_MODER |= (1UL << 26); // set the output bit for PC13
+
     /* TODO 1.7  Drive PC13 to a known starting level. */
+    *pGPIO_ODR |= (1UL << 13); // set PC13 high
 }
 
 void task1_gpio_update(uint32_t now)
@@ -93,7 +104,7 @@ void task1_gpio_update(uint32_t now)
     /* TODO 1.8  Toggle PC13: read its present level, then drive the opposite
      *           level. There are set-only and reset-only registers as well as
      *           ODR - be ready to say why you chose the one you used. */
-
+    *pGPIO_ODR ^= (1UL << 13); // toggle PC13
     task1_toggle_count++;
 }
 
