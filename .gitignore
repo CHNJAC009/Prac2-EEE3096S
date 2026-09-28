@@ -1,0 +1,62 @@
+# EEE3096S Prac 2 - shared with prac partner.
+# Only sync what the prac asks us to edit/create (mainly Practical_2/Practical2_A/Core/**).
+# Everything below is regenerated per machine by `make` / STM32CubeIDE.
+
+# ---- Build output ---------------------------------------------------------
+build/
+Debug/
+Release/
+*.elf
+*.bin
+*.hex
+*.srec
+*.map
+*.o
+*.d
+*.su
+*.cyclo
+*.list
+*.lst
+*.axf
+objects.list
+objects.mk
+
+# ---- STM32CubeIDE / Eclipse (created on import, machine-specific) ---------
+.project
+.cproject
+.settings/
+.metadata/
+.mxproject
+RemoteSystemsTempFiles/
+# duplicate launch configs the IDE creates, e.g. "Practical2_A Debug (1).launch"
+*\(*\).launch
+
+# ---- Editors / OS ---------------------------------------------------------
+.vscode/
+.idea/
+*.swp
+*~
+.DS_Store
+Thumbs.db
+desktop.ini
+~$*
+
+# ---- LaTeX report build files (if the report lives in the repo) ----------
+*.aux
+*.bbl
+*.blg
+*.fdb_latexmk
+*.fls
+*.log
+*.out
+*.synctex.gz
+*.toc
+
+# ---- Local-only files -----------------------------------------------------
+# Claude Code notes/settings - personal, not for the partner
+CLAUDE.md
+CLAUDE.local.md
+.claude/
+
+# Duplicate of Practical_2/Practical2_A/prac_02.pdf (already tracked)
+/prac_02.pdf
