@@ -1,23 +1,19 @@
 % ============================================================================
 % Section 1: Memory-Mapped GPIO (Task 1)
-% Handout requires: peripheral addresses and offsets, bit masks used,
-% short explanation of volatile, Task 1 oscilloscope capture.
+% Handout s10.2 requires ONLY: peripheral addresses and offsets, bit masks
+% used, short explanation of volatile, Task 1 oscilloscope capture.
 % ============================================================================
 \section{Memory-Mapped GPIO}
 \label{sec:gpio}
 
-PC13 was configured as a push-pull output and toggled using explicit
-\reg{volatile} pointers built from addresses in RM0091~\cite{rm0091}, without
-any HAL GPIO function. Each register address is the peripheral base address plus
-the register offset, $A = B + O$ (\cref{tab:gpio-addr}). The build checks every
-address against the CMSIS device header with \reg{\_Static\_assert}.
+PC13 was driven through explicit \reg{volatile} register pointers, each at
+address $A = B + O$ (\cref{tab:gpio-addr}), with the masks in \cref{tab:gpio-masks}.
 
-% Values below are taken from Core/Src/task1_gpio.c. Sources checked against
-% RM0091 Rev 9: base addresses from Table 1 (p.46), offsets from the RCC
-% register map (s6.4.15, p.135) and the GPIO register descriptions (s8.4).
+% Values from Core/Src/task1_gpio.c. Sources: RM0091 Rev 9 Table 1 (p.46),
+% RCC register map s6.4.15 (p.135), GPIO register descriptions s8.4.
 \begin{table}[htbp]
   \centering
-  \caption{Base addresses, offsets and resulting register addresses used in Task 1.}
+  \caption{Base addresses, offsets and register addresses.}
   \label{tab:gpio-addr}
   \begin{tabular}{@{}lllll@{}}
     \toprule
@@ -27,51 +23,33 @@ address against the CMSIS device header with \reg{\_Static\_assert}.
     \reg{GPIOC\_MODER} & \texttt{0x4800 0800} & \texttt{0x00} & \texttt{0x4800 0800} & \cite[Tab.~1, \S8.4.1]{rm0091} \\
     \reg{GPIOC\_ODR}   & \texttt{0x4800 0800} & \texttt{0x14} & \texttt{0x4800 0814} & \cite[Tab.~1, \S8.4.6]{rm0091} \\
     \reg{GPIOC\_BSRR}  & \texttt{0x4800 0800} & \texttt{0x18} & \texttt{0x4800 0818} & \cite[Tab.~1, \S8.4.7]{rm0091} \\
-    \reg{GPIOC\_BRR}   & \texttt{0x4800 0800} & \texttt{0x28} & \texttt{0x4800 0828} & \cite[Tab.~1, \S8.4.11]{rm0091} \\
     \bottomrule
   \end{tabular}
 \end{table}
 
-% Masks below match the current implementation in task1_gpio.c. Update this
-% table if you change the code (e.g. switch the toggle to BSRR/BRR).
+% Masks match the current implementation in task1_gpio.c.
 \begin{table}[htbp]
   \centering
-  \caption{Bit masks used in Task 1.}
+  \caption{Bit masks used.}
   \label{tab:gpio-masks}
-  \begin{tabularx}{\linewidth}{@{}llllX@{}}
+  \begin{tabular}{@{}llll@{}}
     \toprule
-    \textbf{Register} & \textbf{Field} & \textbf{Mask} & \textbf{Operation} & \textbf{Purpose} \\
+    \textbf{Register} & \textbf{Field} & \textbf{Mask} & \textbf{Operation} \\
     \midrule
-    \reg{RCC\_AHBENR}  & IOPCEN (bit 19)          & \texttt{(1UL << 19)} & \texttt{|=}  & Enable the GPIOC clock; other clock enables kept \\
-    \reg{GPIOC\_MODER} & MODER13[1:0] (bits 27:26) & \texttt{(3 << 26)} & \texttt{\&= \textasciitilde} & Clear PC13's mode field; other pins unchanged \\
-    \reg{GPIOC\_MODER} & MODER13 = \texttt{01}     & \texttt{(1UL << 26)} & \texttt{|=}  & General-purpose output mode \\
-    \reg{GPIOC\_BSRR}  & BS13 (bit 13)            & \texttt{(1UL << 13)} & \texttt{=}  & Known starting level (high) \\
-    \reg{GPIOC\_ODR}   & ODR13 (bit 13)           & \texttt{(1UL << 13)} & \texttt{\^{}=} & Toggle PC13 every half period \\
+    \reg{RCC\_AHBENR}  & IOPCEN (bit 19)                & \texttt{(1UL << 19)} & \texttt{|=} \\
+    \reg{GPIOC\_MODER} & MODER13 (bits 27:26), clear    & \texttt{(3 << 26)}   & \texttt{\&= \textasciitilde} \\
+    \reg{GPIOC\_MODER} & MODER13 = \texttt{01} (output) & \texttt{(1UL << 26)} & \texttt{|=} \\
+    \reg{GPIOC\_BSRR}  & BS13 (bit 13), start high      & \texttt{(1UL << 13)} & \texttt{=} \\
+    \reg{GPIOC\_ODR}   & ODR13 (bit 13), toggle         & \texttt{(1UL << 13)} & \texttt{\^{}=} \\
     \bottomrule
-  \end{tabularx}
+  \end{tabular}
 \end{table}
-
-\paragraph{Choice of output register.}
-PC13 is toggled with a read-modify-write (\texttt{\^{}=}) on \reg{GPIOC\_ODR}. The
-alternative is to read ODR and then write BSRR (set) or BRR (reset), which is a
-single atomic write. The ODR read-modify-write is safe here because no interrupt
-or other code writes to GPIOC, so nothing can change ODR between the read and
-the write, and \texttt{\^{}=} is the simpler implementation. BSRR is used for the
-starting level, where a single write suffices.
 
 \paragraph{Why \texttt{volatile}.}
 A peripheral register can change, or react to being accessed, independently of
 the program flow. \texttt{volatile} forces the compiler to perform every read and
-write to the register address exactly as written, instead of keeping a copy in a
-CPU register or removing accesses it considers redundant. Without it, repeated
-writes to ODR in the loop could be optimised away, so PC13 would never toggle.
+write exactly as written instead of caching the value or removing accesses it
+considers redundant; without it, the writes to ODR could be optimised away.
 
-\paragraph{GPIO clock disabled.}
-If IOPCEN is never set, GPIOC is not clocked: writes to its registers (MODER, ODR,
-BSRR) have no effect and reads return 0, so PC13 stays in its reset state (input)
-and never toggles.
-
-
-\scopefig{task1_pc13.jpeg}{PC13 square wave generated by memory-mapped GPIO
-  (\reg{task1\_half\_period\_ms} $=$ 5~ms, so 10~ms period and 100~Hz expected).
-  Measured period 9.928~ms, frequency 100.73~Hz.}{fig:task1}
+\scopefig{task1_pc13.jpeg}{PC13 square wave (\reg{task1\_half\_period\_ms} $=$ 5~ms):
+  measured period 9.928~ms, frequency 100.73~Hz.}{fig:task1}

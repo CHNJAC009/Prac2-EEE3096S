@@ -1,8 +1,10 @@
 % ============================================================================
 % Section 4: EEPROM Driver (Task 4)
-% Handout requires: calculation of A, concise write/read transaction sequence,
-% status mechanism used to detect write completion, write/read result,
-% CS/SCK oscilloscope capture.
+% Handout s10.2 requires ONLY: calculation of A, a concise transaction
+% sequence for write and read, the status mechanism used to detect write
+% completion, the write/read result, a CS/SCK oscilloscope capture.
+% README s5.2 also asks to write down how the 2-byte address format was
+% confirmed on the bench.
 % ============================================================================
 \section{EEPROM Driver}
 \label{sec:eeprom}
@@ -10,67 +12,39 @@
 \paragraph{Group address.}
 \begin{equation}
   A = (n_1 + 3n_2) \bmod 256 = (\nOne + 3 \times \nTwo) \bmod 256
-    = \ASum \bmod 256 = \ADec = \text{\AHex}.
+    = \ADec = \text{\AHex}.
 \end{equation}
 
-\paragraph{Address format.}
-The fitted EEPROM takes a two-byte address, most significant byte first, and
-holds 8192 bytes, not the single address byte of the CAT25040 named in the
-handout~\cite{readme}.
-\writeup{How you confirmed the address format on the bench (e.g. what happened to a write/read with the wrong number of address bytes, and the WEL bit afterwards).}
-
-\paragraph{Transaction sequences.}
-Every transaction is framed by CS low \ldots\ CS high and built from single-byte
-\reg{spi\_transfer()} calls. Opcodes and status bits are from the EEPROM
-datasheet~\cite{eeprom}.
+\paragraph{Transaction sequence.}
+Each transaction is framed by CS low \ldots\ CS high (\cref{tab:transactions}).
+The fitted EEPROM uses a two-byte address, MSB first~\cite{readme}.
 
 \begin{table}[htbp]
   \centering
-  \caption{EEPROM transactions used by the driver.}
+  \caption{Write and read sequence, in order.}
   \label{tab:transactions}
   \small
   \begin{tabularx}{\linewidth}{@{}l l X r@{}}
     \toprule
-    \textbf{Operation} & \textbf{Opcode} & \textbf{Bytes sent (MOSI) $\rightarrow$ received (MISO)} & \textbf{Clocks} \\
+    \textbf{Step} & \textbf{Opcode} & \textbf{MOSI $\rightarrow$ MISO} & \textbf{Clocks} \\
     \midrule
-    Write enable (WREN) & \fillin{0x..} & WREN & \fillin{8} \\
-    Write byte (WRITE)  & \fillin{0x..} & WRITE, A[15:8], A[7:0], data & \fillin{32} \\
-    Read status (RDSR)  & \fillin{0x..} & RDSR, dummy $\rightarrow$ status & \fillin{16} \\
-    Read byte (READ)    & \fillin{0x..} & READ, A[15:8], A[7:0], dummy $\rightarrow$ data & \fillin{32} \\
+    1. WREN  & \fillin{0x..} & WREN & 8 \\
+    2. WRITE & \fillin{0x..} & WRITE, A[15:8], A[7:0], $B$ & 32 \\
+    3. RDSR (repeat until ready) & \fillin{0x..} & RDSR, dummy $\rightarrow$ status & 16 \\
+    4. READ  & \fillin{0x..} & READ, A[15:8], A[7:0], dummy $\rightarrow$ data & 32 \\
     \bottomrule
   \end{tabularx}
 \end{table}
 
-\writeup{Concise write sequence and read sequence as a numbered list (read status, WREN as its own transaction, WRITE, poll status until ready, read back, compare). State when the write-enable latch is set and when the internal write actually starts, with the datasheet reference.}
+\paragraph{Address format.}
+\writeup{How the two-byte address format was confirmed on the bench.}
 
 \paragraph{Write-completion detection.}
-\writeup{Which status-register bit indicates a write in progress, its polarity, the mask used, how the polling loop is bounded (EEPROM\_WRITE\_TIMEOUT\_MS, timeout counter), and why a fixed delay is not used.}
+\writeup{Status bit and polarity used to detect the end of the write, with the datasheet reference.}
 
 \paragraph{Result.}
-\begin{table}[htbp]
-  \centering
-  \caption{Write / read / verify result (debugger variables, \reg{RUN\_TASK}~$=4$).}
-  \label{tab:task4-result}
-  \begin{tabular}{@{}lll@{}}
-    \toprule
-    \textbf{Variable} & \textbf{Value} & \textbf{Meaning} \\
-    \midrule
-    \reg{eeprom\_test\_addr}     & \AHex & address $A$ \\
-    \reg{eeprom\_test\_byte}     & \BHex & byte $B$ written \\
-    \reg{eeprom\_status\_before} & \fillin{0x..} & \fillin{WEL / busy state} \\
-    \reg{eeprom\_status\_after}  & \fillin{0x..} & \fillin{WEL / busy state} \\
-    \reg{eeprom\_write\_wait\_ms} & \fillin{..} & write-cycle time (datasheet max \fillin{..~ms}) \\
-    \reg{eeprom\_read\_value}    & \fillin{0x..} & byte read back \\
-    \reg{eeprom\_verify\_ok}     & \fillin{1} & read value equals $B$ \\
-    LEDs PB7\ldots PB0           & \fillin{bbbbbbbb} & read value on LED7\ldots LED0 \\
-    \bottomrule
-  \end{tabular}
-\end{table}
+$B = \text{\BHex}$ was written to $A = \text{\AHex}$ and read back as
+\fillin{0x..}; verification \fillin{passed}.
 
-\paragraph{Persistence test.}
-\writeup{Write B with PA0, reset / power-cycle the board, and report what the read-only path (runs at reset, never writes) showed on the LEDs and in eeprom\_read\_value.}
-
-\scopefig{task4_cs_sck.png}{Real EEPROM transaction: CH1 = CS (EEPROM pin~1 /
-  PB12), CH2 = SCK (PB13). \fillin{Name the transaction shown}:
-  \fillin{n} clock pulses occur while CS is low, as expected
-  (\cref{tab:transactions}).}{fig:task4}
+\scopefig{task4_cs_sck.png}{\fillin{Transaction name}: CH1 = CS, CH2 = SCK;
+  \fillin{n} clock pulses while CS is low.}{fig:task4}

@@ -14,37 +14,25 @@
 \newcommand{\StudentOneNumber}{CHNJAC009}
 \newcommand{\StudentTwoName}{Sibongokuhle Sibiya}
 \newcommand{\StudentTwoNumber}{SBYSIB014}
-\newcommand{\GroupRepo}{\url{https://github.com/CHNJAC009/Prac2-EEE3096S}}
-\newcommand{\FinalCommit}{\fillin{short commit hash}}
-\newcommand{\DemoDate}{\fillin{date and time of demo}}
 
 % ---- Group numbers (Task 3 / Task 4) ---------------------------------------
 % n1 = last three digits of STUDENT 1 (CHNJAC009 -> 009 -> 9)
 % n2 = last three digits of STUDENT 2 (SBYSIB014 -> 014 -> 14)
 % These must match STUDENT_N1 / STUDENT_N2 in board_config.h (write them
 % there WITHOUT leading zeros: 009 in C is octal and 014 is 12!).
-% B does not depend on the order (XOR and + are symmetric), but A does.
 \newcommand{\nOne}{9}
-\newcommand{\nOneHex}{0x09}
 \newcommand{\nOneBin}{0000\,1001}
 \newcommand{\nTwo}{14}
-\newcommand{\nTwoHex}{0x0E}
 \newcommand{\nTwoBin}{0000\,1110}
 \newcommand{\XorDec}{7}                    % n1 XOR n2
-\newcommand{\XorHex}{0x07}
 \newcommand{\XorBin}{0000\,0111}
-\newcommand{\SumDec}{68}                   % (n1 XOR n2) + 0x3D = 7 + 61
-\newcommand{\SumHex}{0x44}
-\newcommand{\BRawHex}{0x44}                % ... mod 256
-\newcommand{\BHex}{0x44}                   % final B (0x00/0xFF rule not needed)
+\newcommand{\BHex}{0x44}                   % B = (7 + 0x3D) mod 256
 \newcommand{\BBin}{0100\,0100}
-\newcommand{\ASum}{51}                     % n1 + 3 n2 = 9 + 42
-\newcommand{\ADec}{51}                     % (n1 + 3 n2) mod 256
+\newcommand{\ADec}{51}                     % A = (9 + 3*14) mod 256
 \newcommand{\AHex}{0x33}
 
 % ---- SPI configuration (Task 2) --------------------------------------------
 % Numbers only - the units are added in the text.
-\newcommand{\PCLKHz}{8\,000\,000}          % in Hz
 \newcommand{\PCLKMHz}{8}                   % in MHz
 \newcommand{\SPIInstance}{SPI2}
 \newcommand{\SPIAF}{AF0}
@@ -52,7 +40,6 @@
 \newcommand{\BRDec}{4}
 \newcommand{\BRDivider}{32}                % 2^(BR+1)
 \newcommand{\fSCKPred}{250}                % in kHz
-\newcommand{\TSCKPred}{4}                  % in microseconds (1 / 250 kHz)
 
 % ---- SPI waveform (Task 3) - measure these on the scope --------------------
 \newcommand{\TSCKMeas}{\fillin{T\textsubscript{SCK}}} % in microseconds
