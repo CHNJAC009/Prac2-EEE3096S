@@ -3,59 +3,73 @@
 % Handout requires: calculation of B, SCK/MOSI capture, measured SCK
 % frequency, percentage error, manual decoding of the transmitted byte.
 % The waveform is the evidence - decode it from the capture, not the code.
+%
+% PRE-FILLED before measuring: B, the predictions (Expected columns) and the
+% explanations. Still to do after the scope capture (all red):
+%   - figures/task3_sck_mosi.png
+%   - \TSCKMeas, \fSCKMeas, \fSCKErr in values.tex
+%   - the "Measured" column of Table (task3-meas) and the "Measured" row of
+%     Table (decode)
+%   - the two short sentences marked \fillin below
 % ============================================================================
 \section{SPI Waveform}
 \label{sec:spi-waveform}
 
 \paragraph{Group test byte.}
-With $n_1 = \nOne$ and $n_2 = \nTwo$ (last three digits of each student number):
+With $n_1 = \nOne$ (\StudentOneNumber) and $n_2 = \nTwo$ (\StudentTwoNumber),
+the last three decimal digits of each student number:
 \begin{align}
-  n_1 \oplus n_2 &= \text{\nOneHex} \oplus \text{\nTwoHex} = \text{\XorHex} \\
+  n_1 \oplus n_2 &= \text{\nOneHex} \oplus \text{\nTwoHex} = \text{\XorHex}
+    \quad \text{(\cref{tab:xor})} \\
   B &= \left[(n_1 \oplus n_2) + \text{0x3D}\right] \bmod 256
-     = \text{\SumHex} \bmod 256 = \text{\BRawHex}
+     = (\XorDec + 61) \bmod 256 = \SumDec = \text{\BHex}.
 \end{align}
-\fillin{State whether the 0x00/0xFF rule applied.} The group test byte is
-therefore $B = \text{\BHex} = \text{\BBin}_2$.
+The result is neither 0x00 nor 0xFF, so the $\oplus\,$0x5A rule does not apply.
+The group test byte is therefore $B = \text{\BHex} = \texttt{\BBin}_2$. The build
+confirms this hand calculation with a \reg{\_Static\_assert} in \reg{main.c}.
 
 \begin{table}[htbp]
   \centering
   \caption{Bitwise XOR of $n_1$ and $n_2$.}
   \label{tab:xor}
-  \begin{tabular}{@{}lll@{}}
+  \begin{tabular}{@{}llll@{}}
     \toprule
-     & \textbf{Decimal} & \textbf{Binary} \\
+     & \textbf{Decimal} & \textbf{Hex} & \textbf{Binary} \\
     \midrule
-    $n_1$ & \nOne & \texttt{\nOneBin} \\
-    $n_2$ & \nTwo & \texttt{\nTwoBin} \\
-    $n_1 \oplus n_2$ & \fillin{} & \texttt{\XorBin} \\
+    $n_1$            & \nOne   & \nOneHex & \texttt{\nOneBin} \\
+    $n_2$            & \nTwo   & \nTwoHex & \texttt{\nTwoBin} \\
+    $n_1 \oplus n_2$ & \XorDec & \XorHex  & \texttt{\XorBin} \\
     \bottomrule
   \end{tabular}
 \end{table}
 
 \paragraph{Capture.}
-$B$ was written to \reg{SPI\_DR} every 100~ms with CS (PB12) held high so the
-EEPROM ignored the transfer. CH1 was connected to SCK (PB13) and CH2 to MOSI
-(PB15).
+With \reg{RUN\_TASK}~$=3$, $B$ is written to \reg{SPI2\_DR} every 100~ms while CS
+(PB12) is held high, so the EEPROM ignores the transfer. The data register is
+written with an 8-bit access; a 16-bit write would pack two frames and produce
+16 clocks \cite[\S28.5.9]{rm0091}. CH1 was connected to SCK (PB13) and CH2 to
+MOSI (PB15), with both probes and channels set to $\times$10 and the scope
+triggered on the first SCK edge.
 
-\scopefig{task3_sck_mosi.png}{One byte transmitted by the hardware SPI
-  peripheral: CH1 = SCK (PB13), CH2 = MOSI (PB15). Cursors mark one SCK
-  period.}{fig:task3}
+\scopefig{task3_sck_mosi.png}{One byte ($B = \text{\BHex}$) transmitted by the
+  hardware SPI peripheral: CH1 = SCK (PB13), CH2 = MOSI (PB15). Cursors mark one
+  SCK period.}{fig:task3}
 
 \begin{table}[htbp]
   \centering
-  \caption{Quantities read from \cref{fig:task3}.}
+  \caption{Predicted and measured waveform properties (\cref{fig:task3}).}
   \label{tab:task3-meas}
-  \begin{tabular}{@{}ll@{}}
+  \begin{tabular}{@{}lll@{}}
     \toprule
-    \textbf{Quantity} & \textbf{Measured} \\
+    \textbf{Quantity} & \textbf{Expected} & \textbf{Measured} \\
     \midrule
-    SCK period $T_\mathrm{SCK}$ & \TSCKMeas~\si{\micro\second} \\
-    SCK frequency $f_\mathrm{SCK} = 1/T_\mathrm{SCK}$ & \fSCKMeas~kHz \\
-    Clock idle state & \fillin{low / high} \\
-    Number of clock cycles & \fillin{8} \\
-    Sampling edge & \fillin{rising / falling} \\
-    Bit order & \fillin{MSB / LSB first} \\
-    Decoded value & \fillin{0x..} \\
+    SCK period $T_\mathrm{SCK}$       & \TSCKPred~\si{\micro\second} & \TSCKMeas~\si{\micro\second} \\
+    SCK frequency $f_\mathrm{SCK} = 1/T_\mathrm{SCK}$ & \fSCKPred~kHz & \fSCKMeas~kHz \\
+    Clock idle state                  & low (CPOL = 0)        & \fillin{low / high} \\
+    Number of clock cycles            & 8 (8-bit frame)       & \fillin{8} \\
+    Sampling edge                     & rising (CPHA = 0)     & \fillin{rising / falling} \\
+    Bit order                         & MSB first             & \fillin{MSB / LSB first} \\
+    Transmitted value                 & \BHex                 & \fillin{0x..} \\
     \bottomrule
   \end{tabular}
 \end{table}
@@ -64,26 +78,40 @@ EEPROM ignored the transfer. CH1 was connected to SCK (PB13) and CH2 to MOSI
 \begin{equation}
   \%\,\mathrm{error}
   = \frac{\lvert f_\mathrm{measured} - f_\mathrm{predicted}\rvert}{f_\mathrm{predicted}} \times 100
-  = \frac{\lvert \text{\fSCKMeas} - \text{\fSCKPred} \rvert}{\text{\fSCKPred}} \times 100
-  = \text{\fSCKErr}\,\%.
+  = \frac{\lvert \fSCKMeas - \fSCKPred \rvert}{\fSCKPred} \times 100
+  = \fSCKErr\,\%.
 \end{equation}
-\writeup{One sentence on the likely cause of the error (e.g. HSI oscillator tolerance, cursor placement).}
+SCK is derived directly from the HSI RC oscillator, which is factory-calibrated to
+$\pm1\,\%$ at 25~\si{\celsius} and specified between $-1\,\%$ and $+2\,\%$ over
+0--55~\si{\celsius} \cite[Tab.~37]{stm32f051ds}. The measured error of
+\fSCKErr\,\% is \fillin{within / outside} this tolerance\fillin{, with the remainder
+attributable to cursor placement on the scope}.
 
 \paragraph{Manual decoding.}
-MOSI was read at each sampling edge of SCK (\cref{tab:decode}).
+With CPOL = 0 and CPHA = 0, the first SCK edge is rising and is the first data
+capture edge; data is latched on every rising edge \cite[\S28.5.6]{rm0091}. The
+master therefore places each bit on MOSI half a clock period before the rising
+edge that samples it, changing MOSI on the falling edges; the first bit (b7) is
+already on MOSI before the first rising edge \cite[Fig.~277, p.~764]{rm0091}.
+This matches the EEPROM, which latches SI on the rising edge of SCK
+\cite[p.~5]{eeprom}. MOSI was read at each rising edge in \cref{fig:task3}
+(\cref{tab:decode}).
 
 \begin{table}[htbp]
   \centering
-  \caption{Bit-by-bit decoding of the MOSI trace in \cref{fig:task3}.}
+  \caption{Bit-by-bit decoding of the MOSI trace, MSB first.}
   \label{tab:decode}
   \begin{tabular}{@{}lcccccccc@{}}
     \toprule
-    \textbf{Clock edge \#} & 1 & 2 & 3 & 4 & 5 & 6 & 7 & 8 \\
-    \textbf{Bit} & \fillin{b7} & \fillin{b6} & \fillin{b5} & \fillin{b4} & \fillin{b3} & \fillin{b2} & \fillin{b1} & \fillin{b0} \\
-    \textbf{MOSI level} & \fillin{H/L} & \fillin{H/L} & \fillin{H/L} & \fillin{H/L} & \fillin{H/L} & \fillin{H/L} & \fillin{H/L} & \fillin{H/L} \\
-    \textbf{Value} & \fillin{} & \fillin{} & \fillin{} & \fillin{} & \fillin{} & \fillin{} & \fillin{} & \fillin{} \\
+    \textbf{Rising edge \#} & 1 & 2 & 3 & 4 & 5 & 6 & 7 & 8 \\
+    \textbf{Bit}            & b7 & b6 & b5 & b4 & b3 & b2 & b1 & b0 \\
+    \midrule
+    \textbf{Expected ($B$)} & 0 & 1 & 0 & 0 & 0 & 1 & 0 & 0 \\
+    \textbf{Measured MOSI}  & \fillin{} & \fillin{} & \fillin{} & \fillin{} & \fillin{} & \fillin{} & \fillin{} & \fillin{} \\
     \bottomrule
   \end{tabular}
 \end{table}
 
-\writeup{The decoded byte (hex) and a one-line comparison with $B$. Explain where the sampling edge occurs relative to the data transitions, and how that follows from CPOL/CPHA.}
+The decoded byte is \fillin{0100\,0100$_2$ = 0x44}, which \fillin{equals} the group
+test byte $B = \text{\BHex}$. Only bits b6 and b2 are high, so on the scope MOSI
+should show exactly two high pulses, in the 2nd and 6th bit periods.

@@ -1,27 +1,33 @@
 % ============================================================================
 % References (IEEE style via biblatex).
-% Check the revision number and date of the exact document YOU used and fix
-% the red placeholders. Cite specific sections/tables in the text, e.g.
-%   \cite[Sec.~6.4.6]{rm0091}   or   \cite[Tab.~14]{stm32f051ds}
+% Revisions below are the exact documents in the repo root.
+% Cite specific sections/tables/pages in the text, e.g.
+%   \cite[\S6.4.6]{rm0091}   or   \cite[Tab.~15]{stm32f051ds}
 % The handout says "STM32 datasheet" alone is not sufficient.
 % ============================================================================
 
 @manual{rm0091,
-  title        = {{RM0091} Reference Manual: {STM32F0x1/STM32F0x2/STM32F0x8} Advanced {Arm}-Based 32-Bit {MCUs}},
+  title        = {{RM0091} Reference Manual: {STM32F0x1/STM32F0x2/STM32F0x8} Advanced {ARM}-Based 32-Bit {MCUs}},
   organization = {STMicroelectronics},
-  note         = {Rev.~\fillin{x}, \fillin{date}},
+  note         = {DocID018940 Rev.~9},
+  month        = jan,
+  year         = {2017},
 }
 
 @manual{stm32f051ds,
-  title        = {{STM32F051x4 STM32F051x6 STM32F051x8} Datasheet ({DS8668})},
+  title        = {{STM32F051x4 STM32F051x6 STM32F051x8}: {ARM}-Based 32-Bit {MCU}, 16 to 64~{KB} {Flash}, 11 Timers, {ADC}, {DAC} and Communication Interfaces, 2.0--3.6~{V}},
   organization = {STMicroelectronics},
-  note         = {Rev.~\fillin{x}, \fillin{date}},
+  note         = {Datasheet, DocID022265 Rev.~7},
+  month        = jan,
+  year         = {2017},
 }
 
 @manual{eeprom,
   title        = {{CAT25010, CAT25020, CAT25040}: 1-{Kb}, 2-{Kb} and 4-{Kb} {SPI} Serial {CMOS} {EEPROM}},
   organization = {onsemi},
-  note         = {Rev.~\fillin{x}, \fillin{date}. The fitted part uses two address bytes and 8192 bytes (see README)},
+  note         = {Datasheet CAT25010/D, Rev.~25. The fitted part uses two address bytes and 8192 bytes (see README)},
+  month        = jul,
+  year         = {2015},
 }
 
 @misc{board,
