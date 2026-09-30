@@ -36,8 +36,8 @@ volatile uint8_t run_task = RUN_TASK;
  *           BY HAND, put your values into these two checks and uncomment
  *           them. If the build disagrees with your hand calculation, you find
  *           out now rather than at the demonstration. */
-/* _Static_assert(TEST_BYTE_B   == 0x00u, "group test byte B mismatch"); */
-/* _Static_assert(EEPROM_ADDR_A == 0x00u, "group address A mismatch");   */
+_Static_assert(TEST_BYTE_B   == 0x44u, "group test byte B mismatch");
+_Static_assert(EEPROM_ADDR_A == 0x29u, "group address A mismatch");
 
 /* TODO 2.11  Once TODO 2.1 and 2.3 are done, uncomment this. It proves your
  *            divider really gives 250 kHz from the clock this build uses. */

@@ -22,7 +22,34 @@ void eeprom_cs_high(void)
      *           finished transmitting. A received byte does not mean the
      *           last bits have left the shift register. RM0091 lists the
      *           status flags to wait for (see its procedure for disabling the
-     *           SPI). Raising CS early cuts the end off a command. */
+     *           SPI). Raising CS early cuts the end off a command.
+     * 
+     * Two conditions must BOTH be true before CS can go HIGH:
+     *
+     * 1. TXE (bit 1 of SPI_SR) = 1 → transmit buffer is empty
+     *    This means software can write the next byte, but the shift
+     *    register may still be clocking out the current byte.
+     *
+     * 2. BSY (bit 7 of SPI_SR) = 0 → shift register is finished
+     *    This is the definitive "last bit has left the pin" flag.
+     *    Raising CS before BSY clears will cut the end off the frame.
+     * RM0091 Section 28.3.8 "Disabling the SPI" lists this exact sequence.
+     */
+    
+    /* Wait for transmit buffer empty */
+    while (!(EE_SPI->SR & SPI_SR_TXE))
+    {
+        /* spin */
+    }
+
+    /* Wait for shift register to finish (BSY goes LOW) */
+    while (EE_SPI->SR & SPI_SR_BSY)
+    {
+        /* spin */
+    }
+
+    /* Now safe to raise CS — last bit has left the shift register */
+    EE_SPI_GPIO->BSRR = EE_CS_MASK;         /* RM0091 GPIOx_BSRR */
 }
 
 /* ==========================================================================

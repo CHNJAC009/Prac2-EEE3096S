@@ -148,8 +148,8 @@
  *           Write them WITHOUT leading zeros: in C, 010 is octal, i.e. 8.
  *           Then work out B and A by hand for your report, and check them
  *           against the build (TODO 3.2 in main.c). */
-#define STUDENT_N1              0u          /* <- TODO */
-#define STUDENT_N2              0u          /* <- TODO */
+#define STUDENT_N1              14u          /* <- TODO */
+#define STUDENT_N2              9u          /* <- TODO */
 
 /* The formulas from the handout. */
 #define TEST_BYTE_B_RAW         ((((STUDENT_N1 ^ STUDENT_N2) + 0x3Du)) % 256u)
