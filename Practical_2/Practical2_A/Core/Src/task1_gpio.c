@@ -90,7 +90,7 @@ void task1_gpio_init(void)
     *pGPIO_MODER |= (1UL << 26); // set the output bit for PC13
 
     /* TODO 1.7  Drive PC13 to a known starting level. */
-    *pGPIO_ODR |= (1UL << 13); // set PC13 high
+    *pGPIO_BSRR = (1UL << 13); // set PC13 high
 }
 
 void task1_gpio_update(uint32_t now)

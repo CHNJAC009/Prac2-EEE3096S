@@ -51,6 +51,10 @@ desktop.ini
 *.out
 *.synctex.gz
 *.toc
+*.bcf
+*.run.xml
+# Overleaf upload bundle (regenerated from Practical_2/Report/)
+*.zip
 
 # ---- Local-only files -----------------------------------------------------
 # Claude Code notes/settings - personal, not for the partner
@@ -58,5 +62,6 @@ CLAUDE.md
 CLAUDE.local.md
 .claude/
 
-# Duplicate of Practical_2/Practical2_A/prac_02.pdf (already tracked)
-/prac_02.pdf
+# Duplicate of Practical_2/Practical2_A/prac_02.pdf (already tracked), and the
+# reference manuals/datasheets kept in the repo root (large, downloadable from ST)
+/*.pdf

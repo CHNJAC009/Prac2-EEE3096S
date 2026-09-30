@@ -1,0 +1,78 @@
+% ============================================================================
+% Section 6: Non-Blocking FSM (Task 6)
+% Handout requires: final state-machine diagram (initial state, transition
+% conditions, success path, failure path, abort path), short description of
+% the transition logic, why it is non-blocking, one example write/read/verify
+% result.
+% ============================================================================
+\section{Non-Blocking FSM}
+\label{sec:fsm}
+
+The Task~4 transaction was restructured as a deterministic finite state machine,
+\reg{update\_eeprom\_state\_machine()}, called once per pass of the main loop
+between \reg{read\_inputs()} and \reg{update\_outputs()}. PA0 starts a
+transaction and PA3 aborts it.
+
+% Option A: export your diagram (draw.io, etc.) to figures/task6_fsm.png.
+% Option B: draw it in TikZ - replace the \scopefig line with a figure
+%           environment containing a tikzpicture. Minimal starter:
+%
+% \begin{figure}[htbp]
+%   \centering
+%   \begin{tikzpicture}[>=Stealth, node distance=2.2cm, auto,
+%                       every state/.style={rounded rectangle, draw, minimum height=0.8cm}]
+%     \node[state, initial]        (s0) {STATE\_A};
+%     \node[state, right=of s0]    (s1) {STATE\_B};
+%     \path[->] (s0) edge node {condition} (s1)
+%               (s1) edge[bend left] node {PA3} (s0);
+%   \end{tikzpicture}
+%   \caption{...}
+%   \label{fig:fsm}
+% \end{figure}
+%
+% (rounded rectangle needs \usetikzlibrary{shapes.misc}; or use plain circles.)
+\scopefig[0.9\linewidth]{task6_fsm.png}{EEPROM transaction state machine.
+  Initial state \fillin{name}. Success, failure and abort paths are
+  \fillin{marked how}.}{fig:fsm}
+
+\begin{table}[htbp]
+  \centering
+  \caption{States, the work done per call, and exit conditions.}
+  \label{tab:states}
+  \small
+  \begin{tabularx}{\linewidth}{@{}l c X X@{}}
+    \toprule
+    \textbf{State} & \textbf{\reg{ee\_state}} & \textbf{Work done in one call} & \textbf{Next state (condition)} \\
+    \midrule
+    \fillin{IDLE}  & \fillin{0} & \fillin{} & \fillin{} \\
+    \fillin{}      & \fillin{}  & \fillin{} & \fillin{} \\
+    \fillin{}      & \fillin{}  & \fillin{} & \fillin{} \\
+    \fillin{}      & \fillin{}  & \fillin{} & \fillin{} \\
+    \fillin{}      & \fillin{}  & \fillin{} & \fillin{} \\
+    \fillin{}      & \fillin{}  & \fillin{} & \fillin{} \\
+    \fillin{}      & \fillin{}  & \fillin{} & \fillin{} \\
+    \midrule
+    Any active state & -- & -- & \fillin{IDLE} (PA3 abort) \\
+    \bottomrule
+  \end{tabularx}
+\end{table}
+
+\paragraph{Transition logic.}
+\writeup{Short description: what starts a transaction, how the busy state schedules the next status check with HAL\_GetTick(), how completion is decided from the status register, what happens on timeout (never ready), how abort leaves the SPI bus and CS, and what the status LEDs show in each case.}
+
+\paragraph{Why the implementation is non-blocking.}
+\writeup{Each call does a bounded amount of work (at most one short SPI transaction) and returns; no HAL\_Delay or busy-wait for the internal write cycle. Support with evidence, e.g. the PC13 heartbeat continuing during a write with ee\_use\_fsm = 1 but stalling with ee\_use\_fsm = 0, and PA3 being honoured mid-transaction.}
+
+\begin{table}[htbp]
+  \centering
+  \caption{Example write / read / verify and abort results with the FSM.}
+  \label{tab:fsm-result}
+  \begin{tabular}{@{}llllll@{}}
+    \toprule
+    \textbf{Test} & \textbf{Address} & \textbf{Byte written} & \textbf{\reg{ee\_last\_read}} & \textbf{Final state} & \textbf{Status LED} \\
+    \midrule
+    Write/verify & \AHex & \BHex & \fillin{0x..} & \fillin{} & \fillin{green} \\
+    Abort (PA3)  & \fillin{} & \fillin{} & \fillin{} & \fillin{IDLE} & \fillin{} \\
+    \bottomrule
+  \end{tabular}
+\end{table}

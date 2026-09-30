@@ -28,7 +28,7 @@
 
 #include "prac2a.h"
 
-#define RUN_TASK    1
+#define RUN_TASK    2
 
 volatile uint8_t run_task = RUN_TASK;
 
@@ -41,8 +41,8 @@ volatile uint8_t run_task = RUN_TASK;
 
 /* TODO 2.11  Once TODO 2.1 and 2.3 are done, uncomment this. It proves your
  *            divider really gives 250 kHz from the clock this build uses. */
-/* _Static_assert(EE_SCK_HZ_PREDICTED == 250000UL,
-                  "SPI divider does not give 250 kHz from this PCLK1"); */
+_Static_assert(EE_SCK_HZ_PREDICTED == 250000UL,
+               "SPI divider does not give 250 kHz from this PCLK1");
 
 _Static_assert(EEPROM_ADDR_A < EEPROM_SIZE_BYTES, "address A is outside the EEPROM");
 _Static_assert((RUN_TASK >= 1) && (RUN_TASK <= 6), "RUN_TASK must be 1 to 6");
@@ -103,6 +103,7 @@ void SystemClock_Config(void)
     RCC_ClkInitStruct.ClockType      = RCC_CLOCKTYPE_HCLK | RCC_CLOCKTYPE_SYSCLK
                                      | RCC_CLOCKTYPE_PCLK1;
     RCC_ClkInitStruct.SYSCLKSource   = RCC_SYSCLKSOURCE_HSI;
+    //Divider section
     RCC_ClkInitStruct.AHBCLKDivider  = RCC_SYSCLK_DIV1;
     RCC_ClkInitStruct.APB1CLKDivider = RCC_HCLK_DIV1;
 

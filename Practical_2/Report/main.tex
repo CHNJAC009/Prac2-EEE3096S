@@ -1,0 +1,135 @@
+% ============================================================================
+% EEE3096S 2026 - Practical 2: Memory-Mapped I/O and Hardware SPI
+% Written submission (max 8 pages excluding title page and references)
+%
+% HOW TO USE THIS TEMPLATE
+%   1. Fill in values.tex first (names, student numbers, n1/n2, B, A, ...).
+%      Those values are reused automatically throughout the report.
+%   2. Drop screenshots into figures/ using the file names listed in
+%      figures/README.md. Until a file exists, a red placeholder box is shown.
+%   3. Replace every red \fillin{...} and \writeup{...} in sections/*.tex.
+%      Search the project for "fillin" and "writeup" to find what is left.
+%   4. Compiler: pdfLaTeX. Bibliography: Biber (Overleaf default).
+%   5. Download the PDF and rename it prac_02_stdnum001_stdnum002.pdf
+%      (your two student numbers) before uploading to Gradescope.
+% ============================================================================
+\documentclass[11pt,a4paper]{article}
+
+% ---- Page and fonts ---------------------------------------------------------
+\usepackage[a4paper,margin=2cm]{geometry}
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage{lmodern}
+\usepackage{microtype}
+
+% ---- Maths, units, tables ---------------------------------------------------
+\usepackage{amsmath}
+\usepackage{siunitx}
+\usepackage{booktabs}
+\usepackage{tabularx}
+\usepackage{array}
+\usepackage{multirow}
+\usepackage{enumitem}
+\setlist{nosep}
+
+% ---- Figures ----------------------------------------------------------------
+\usepackage{graphicx}
+\usepackage{float}
+\usepackage{caption}
+\usepackage{subcaption}
+\captionsetup{font=small,labelfont=bf}
+\usepackage{tikz}
+\usetikzlibrary{automata,positioning,arrows.meta}
+
+% ---- Colour, links, references ---------------------------------------------
+\usepackage{xcolor}
+\usepackage[colorlinks=true,linkcolor=blue!50!black,citecolor=blue!50!black,urlcolor=blue!50!black]{hyperref}
+\usepackage[capitalise,noabbrev]{cleveref}
+\usepackage[style=ieee,backend=biber]{biblatex}
+\addbibresource{references.bib}
+
+% ---- Template helpers -------------------------------------------------------
+% Short value to fill in (shows as red bold text until replaced).
+\DeclareRobustCommand{\fillin}[1]{\textcolor{red}{\textbf{[#1]}}}
+
+% Paragraph to write: shows the prompt in a red box until replaced.
+\newcommand{\writeup}[1]{%
+  \par\noindent\fcolorbox{red}{red!4}{\parbox{\dimexpr\linewidth-2\fboxsep-2\fboxrule}{%
+    \small\textcolor{red!70!black}{\textbf{Write:} #1}}}\par}
+
+% Register / code names in running text.
+\newcommand{\reg}[1]{\texttt{#1}}
+
+% \scopefig[width]{file-in-figures/}{caption}{label}
+% Includes figures/<file> if it exists, otherwise draws a placeholder box.
+\newcommand{\scopefig}[4][0.8\linewidth]{%
+  \begin{figure}[htbp]
+    \centering
+    \IfFileExists{figures/#2}{%
+      \includegraphics[width=#1]{figures/#2}%
+    }{%
+      \fbox{\parbox[c][4.5cm][c]{#1}{\centering\textcolor{red}{\textbf{Insert} \texttt{\detokenize{figures/#2}}}}}%
+    }
+    \caption{#3}
+    \label{#4}
+  \end{figure}}
+
+% \subscope{file}{subcaption}{label} - use inside a figure with \begin{subfigure}.
+\newcommand{\subscope}[3]{%
+  \IfFileExists{figures/#1}{%
+    \includegraphics[width=\linewidth]{figures/#1}%
+  }{%
+    \fbox{\parbox[c][4cm][c]{\dimexpr\linewidth-2\fboxsep-2\fboxrule}{\centering\textcolor{red}{\textbf{Insert}\\\texttt{\detokenize{figures/#1}}}}}%
+  }
+  \caption{#2}
+  \label{#3}}
+
+% ---- Values used throughout the report --------------------------------------
+\input{values}
+
+% ============================================================================
+\begin{document}
+
+% ---- Title page (excluded from the 8-page limit) ---------------------------
+\begin{titlepage}
+  \centering
+  \vspace*{2cm}
+  {\Large EEE3096S: Embedded Systems II\par}
+  \vspace{0.5cm}
+  {\LARGE\bfseries Practical 2: Memory-Mapped I/O and Hardware SPI\par}
+  \vspace{0.3cm}
+  {\large Building and Debugging an EEPROM Driver\par}
+  \vspace{2cm}
+  \begin{tabular}{ll}
+    \toprule
+    \textbf{Name} & \textbf{Student number} \\
+    \midrule
+    \StudentOneName & \StudentOneNumber \\
+    \StudentTwoName & \StudentTwoNumber \\
+    \bottomrule
+  \end{tabular}
+  \par\vspace{1.5cm}
+  \begin{tabular}{rl}
+    Board: & UCT Development Board, STM32F051C8 \\
+    Repository: & \GroupRepo \\
+    Final commit: & \FinalCommit \\
+    Demonstration: & \DemoDate \\
+  \end{tabular}
+  \vfill
+  {\large Department of Electrical Engineering\\University of Cape Town\\2026\par}
+\end{titlepage}
+
+% ---- Report body (max 8 pages) ---------------------------------------------
+\input{sections/01_gpio}
+\input{sections/02_spi_config}
+\input{sections/03_spi_waveform}
+\input{sections/04_eeprom_driver}
+\input{sections/05_fault_diagnosis}
+\input{sections/06_fsm}
+
+% ---- References (excluded from the 8-page limit) ---------------------------
+\clearpage
+\nocite{*} % list every document in references.bib, cited or not
+\printbibliography[title={References}]
+
+\end{document}

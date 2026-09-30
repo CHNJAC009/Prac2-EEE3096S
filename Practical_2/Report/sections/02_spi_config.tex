@@ -1,0 +1,103 @@
+% ============================================================================
+% Section 2: Hardware SPI Configuration (Task 2)
+% Handout requires: the Task 2 configuration table, the SPI clock calculation,
+% the relevant alternate-function information, and the manual sections or
+% datasheet tables used (for EVERY register field).
+% ============================================================================
+\section{Hardware SPI Configuration}
+\label{sec:spi-config}
+
+The EEPROM is driven by the STM32 hardware SPI peripheral, configured entirely
+through its registers (no HAL/LL SPI functions or CubeMX configuration).
+
+\paragraph{Pin mapping.}
+The handout's pin table is inconsistent with the STM32F051 alternate-function
+assignments. The mapping used (Practical 2 README~\cite{readme}) was confirmed by
+continuity measurement with the board unpowered and the P2 jumpers removed
+(\cref{tab:pins}).
+
+\begin{table}[htbp]
+  \centering
+  \caption{EEPROM to STM32 connections, verified by continuity.}
+  \label{tab:pins}
+  \begin{tabular}{@{}lllll@{}}
+    \toprule
+    \textbf{EEPROM pin} & \textbf{Function} & \textbf{STM32 pin} & \textbf{SPI signal} & \textbf{Continuity} \\
+    \midrule
+    1 & CS\#                   & PB12 & GPIO chip select & \fillin{beep / no beep} \\
+    6 & SCK                    & PB13 & SCK             & \fillin{beep / no beep} \\
+    2 & SO (data out of EEPROM) & PB14 & MISO            & \fillin{beep / no beep} \\
+    5 & SI (data into EEPROM)   & PB15 & MOSI            & \fillin{beep / no beep} \\
+    \midrule
+    \fillin{VCC pin} & VCC & 3V3 rail & -- & \fillin{beep / no beep} \\
+    \fillin{VSS pin} & VSS & GND      & -- & \fillin{beep / no beep} \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+\paragraph{Configuration.}
+\Cref{tab:spi-config} is the configuration table required by the handout, with
+the additional fields needed for correct operation below the rule.
+
+\begin{table}[htbp]
+  \centering
+  \caption{SPI configuration, with the source of each value.}
+  \label{tab:spi-config}
+  \small
+  \begin{tabularx}{\linewidth}{@{}l l X >{\raggedright\arraybackslash}p{3.3cm}@{}}
+    \toprule
+    \textbf{Item} & \textbf{Value} & \textbf{Justification} & \textbf{Source} \\
+    \midrule
+    SPI peripheral instance   & \SPIInstance & \fillin{why this instance} & \fillin{DS Tab.~x} \\
+    Peripheral clock frequency & \PCLKMHz~MHz & \fillin{clock tree from SystemClock\_Config()} & \fillin{RM0091 \S x} \\
+    PB13 alternate function    & \SPIAF & \fillin{SPIx\_SCK} & \fillin{DS Tab.~x} \\
+    PB14 alternate function    & \SPIAF & \fillin{SPIx\_MISO} & \fillin{DS Tab.~x} \\
+    PB15 alternate function    & \SPIAF & \fillin{SPIx\_MOSI} & \fillin{DS Tab.~x} \\
+    Clock divider              & $\div$\BRDivider{} (BR = \BRBits) & \fillin{see \cref{eq:sck}} & \fillin{RM0091 \S x} \\
+    Predicted SCK frequency    & \fSCKPred~kHz & \cref{eq:sck} & -- \\
+    CPOL                       & \fillin{0/1} & \fillin{EEPROM SPI mode support} & \fillin{EEPROM DS; RM0091 \S x} \\
+    CPHA                       & \fillin{0/1} & \fillin{data sampled on which edge} & \fillin{EEPROM DS; RM0091 \S x} \\
+    Bit order                  & \fillin{MSB/LSB first} & \fillin{EEPROM expects \ldots} & \fillin{EEPROM DS; RM0091 \S x} \\
+    \midrule
+    Master mode (MSTR)         & \fillin{} & \fillin{STM32 generates SCK} & \fillin{RM0091 \S x} \\
+    NSS management (SSM, SSI)  & \fillin{} & \fillin{CS on GPIO; avoid MODF} & \fillin{RM0091 \S x} \\
+    Data size (DS[3:0])        & \fillin{} & \fillin{8-bit frames} & \fillin{RM0091 \S x} \\
+    RX FIFO threshold (FRXTH)  & \fillin{} & \fillin{RXNE after 8 bits} & \fillin{RM0091 \S x} \\
+    GPIO mode / AFRH (PB13--15) & \fillin{} & \fillin{alternate function, AF number} & \fillin{RM0091 \S x} \\
+    PB12 (CS)                  & \fillin{output, high} & \fillin{why CS starts high} & \fillin{} \\
+    Speed / pull-up            & \fillin{} & \fillin{MISO pull-up while EEPROM SO is high-Z} & \fillin{RM0091 \S x} \\
+    \bottomrule
+  \end{tabularx}
+\end{table}
+
+\paragraph{SPI clock calculation.}
+The SPI kernel clock is PCLK1 $=$ \PCLKHz~Hz. The baud-rate field BR[2:0] of
+\reg{SPI\_CR1} divides it by $2^{\mathrm{BR}+1}$~\cite{rm0091}:
+\begin{equation}
+  f_\mathrm{SCK} = \frac{f_\mathrm{PCLK1}}{2^{\mathrm{BR}+1}}
+                 = \frac{\text{\PCLKHz~Hz}}{\text{\BRDivider}}
+                 = \text{\fSCKPred~kHz}.
+  \label{eq:sck}
+\end{equation}
+\writeup{One or two sentences on why this divider was chosen for $\approx$250~kHz (and the static assert in main.c that confirms it).}
+
+\paragraph{Register values after configuration.}
+\Cref{tab:spi-regs} lists the register contents read in the debugger
+(\reg{dbg\_*} variables / SFR view) with \reg{RUN\_TASK}~$=2$.
+
+\begin{table}[htbp]
+  \centering
+  \caption{Configuration registers read back in the debugger.}
+  \label{tab:spi-regs}
+  \begin{tabularx}{\linewidth}{@{}l l X@{}}
+    \toprule
+    \textbf{Register} & \textbf{Value} & \textbf{Fields decoded} \\
+    \midrule
+    \reg{GPIOB\_MODER} & \fillin{0x\ldots} & \fillin{PB12 = 01, PB13--15 = 10, \ldots} \\
+    \reg{GPIOB\_AFRH}  & \fillin{0x\ldots} & \fillin{AFSEL13/14/15 = \ldots} \\
+    \reg{SPI\_CR1}     & \fillin{0x\ldots} & \fillin{MSTR, BR, CPOL, CPHA, LSBFIRST, SSM, SSI, SPE} \\
+    \reg{SPI\_CR2}     & \fillin{0x\ldots} & \fillin{DS, FRXTH} \\
+    \reg{SPI\_SR}      & \fillin{0x\ldots} & \fillin{TXE, RXNE, BSY, MODF} \\
+    \bottomrule
+  \end{tabularx}
+\end{table}

@@ -33,7 +33,24 @@
  *           Read SystemClock_Config() in main.c, then follow the clock tree in
  *           the RCC chapter of RM0091 to the bus the SPI peripheral sits on.
  *           Do not assume it. */
-#define PCLK1_HZ                0UL         /* <- TODO */
+
+/* Derivation (references are to RM0091 Rev 9, DocID018940, Jan 2017):
+ *  1. SystemClock_Config() (main.c) selects HSI as SYSCLK, PLL off.
+ *  2. HSI = 8 MHz internal RC oscillator
+ *       - RM0091 s6.2   "Clocks", p.95 (first bullet)
+ *       - RM0091 s6.2.2 "HSI clock", p.100 (factory-calibrated to 1% at 25 C)
+ *  3. AHBCLKDivider = RCC_SYSCLK_DIV1 -> HPRE = 0xxx, "SYSCLK not divided"
+ *       - RM0091 s6.4.2 RCC_CFGR, bits 7:4 HPRE, p.112   => HCLK = 8 MHz
+ *  4. APB1CLKDivider = RCC_HCLK_DIV1  -> PPRE = 0xx, "HCLK not divided"
+ *       - RM0091 s6.4.2 RCC_CFGR, bits 10:8 PPRE, p.111  => PCLK = 8 MHz
+ *  5. SPI2 is an APB peripheral, so its kernel clock is PCLK
+ *       - RM0091 s2.2.2 Table 1, p.48: SPI2 at 0x4000 3800 is on the APB bus
+ *       - RM0091 s6.2, p.96: "All the peripheral clocks are derived from their
+ *         bus clock (HCLK for AHB or PCLK for APB)" (SPI is not an exception)
+ *       - RM0091 s6.2, Figure 10 "Clock tree (STM32F03x and STM32F05x)", p.97
+ *  Note: the F0 has a single APB bus. Its clock is called PCLK in RM0091; the
+ *  CMSIS/HAL names (PCLK1, APB1ENR, RCC_HCLK_DIV1) are the same thing. */
+#define PCLK1_HZ                8000000UL   /* HSI 8 MHz / AHB 1 / APB 1    */
 
 /* ==========================================================================
  * 2. SPI PINS - GIVEN (see README section 5, and verify by continuity)
@@ -49,8 +66,19 @@
  *           alternate-function NUMBER connects it to them? Use the STM32F051
  *           datasheet's alternate-function table for port B, and name that
  *           table in your report. */
-#define EE_SPI                  ((SPI_TypeDef *)0x00000000UL) /* <- TODO    */
-#define EE_SPI_AF               0xFFu       /* <- TODO                      */
+/* Peripheral and AF number: STM32F051x4/x6/x8 DATASHEET (DocID022265 Rev 7,
+ *   Jan 2017 - not RM0091), Table 15 "Alternate functions selected through
+ *   GPIOB_AFR registers for port B", p.38. Column AF0 lists
+ *   PB12 = SPI2_NSS, PB13 = SPI2_SCK, PB14 = SPI2_MISO, PB15 = SPI2_MOSI.
+ *   So the peripheral is SPI2 and the AF number is 0.
+ *   (Table 13 "Pin definitions", p.34, lists the same SPI2 functions for
+ *   PB12-PB15 but without AF numbers.)
+ *   (RM0091 does not contain the pin-to-AF mapping; it only describes the
+ *   AFRH register that selects it: RM0091 s8.4.10 GPIOx_AFRH.)
+ * Base address of SPI2: RM0091 s2.2.2 Table 1, p.48:
+ *   0x4000 3800 - 0x4000 3BFF, SPI2, APB bus (= SPI2_BASE in stm32f051x8.h). */
+#define EE_SPI                  ((SPI_TypeDef *)0x40003800UL) /* SPI2       */
+#define EE_SPI_AF               0u          /* AF0 on PB13/PB14/PB15        */
 
 /* ==========================================================================
  * 3. SPI BAUD RATE
@@ -60,7 +88,13 @@
  *           PCLK1_HZ, using the BR field description of SPI_CR1 in RM0091.
  *           Show the arithmetic in your report. Do not tune it until the
  *           waveform "looks right". */
-#define EE_SPI_BR               0UL         /* <- TODO                      */
+/* RM0091 s28.9.1 SPIx_CR1, bits 5:3 BR[2:0] "Baud rate control", p.802:
+ *   000 fPCLK/2, 001 /4, 010 /8, 011 /16, 100 /32, 101 /64, 110 /128, 111 /256
+ *   i.e. f_SCK = fPCLK / 2^(BR+1), which is the shift in EE_SCK_HZ_PREDICTED.
+ * Required divider = 8 000 000 Hz / 250 000 Hz = 32 = 2^5
+ *   => BR + 1 = 5  => BR = 4 = 0b100  => f_SCK = 8 MHz / 32 = 250 kHz exactly.
+ * Checked at build time by the TODO 2.11 _Static_assert in main.c. */
+#define EE_SPI_BR               4UL         /* 0b100: fPCLK/32 = 250 kHz    */
 #define EE_SCK_HZ_PREDICTED     (PCLK1_HZ >> (EE_SPI_BR + 1U))
 
 /* ==========================================================================

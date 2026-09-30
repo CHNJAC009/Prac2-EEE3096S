@@ -1,0 +1,89 @@
+% ============================================================================
+% Section 3: SPI Waveform (Task 3)
+% Handout requires: calculation of B, SCK/MOSI capture, measured SCK
+% frequency, percentage error, manual decoding of the transmitted byte.
+% The waveform is the evidence - decode it from the capture, not the code.
+% ============================================================================
+\section{SPI Waveform}
+\label{sec:spi-waveform}
+
+\paragraph{Group test byte.}
+With $n_1 = \nOne$ and $n_2 = \nTwo$ (last three digits of each student number):
+\begin{align}
+  n_1 \oplus n_2 &= \text{\nOneHex} \oplus \text{\nTwoHex} = \text{\XorHex} \\
+  B &= \left[(n_1 \oplus n_2) + \text{0x3D}\right] \bmod 256
+     = \text{\SumHex} \bmod 256 = \text{\BRawHex}
+\end{align}
+\fillin{State whether the 0x00/0xFF rule applied.} The group test byte is
+therefore $B = \text{\BHex} = \text{\BBin}_2$.
+
+\begin{table}[htbp]
+  \centering
+  \caption{Bitwise XOR of $n_1$ and $n_2$.}
+  \label{tab:xor}
+  \begin{tabular}{@{}lll@{}}
+    \toprule
+     & \textbf{Decimal} & \textbf{Binary} \\
+    \midrule
+    $n_1$ & \nOne & \texttt{\nOneBin} \\
+    $n_2$ & \nTwo & \texttt{\nTwoBin} \\
+    $n_1 \oplus n_2$ & \fillin{} & \texttt{\XorBin} \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+\paragraph{Capture.}
+$B$ was written to \reg{SPI\_DR} every 100~ms with CS (PB12) held high so the
+EEPROM ignored the transfer. CH1 was connected to SCK (PB13) and CH2 to MOSI
+(PB15).
+
+\scopefig{task3_sck_mosi.png}{One byte transmitted by the hardware SPI
+  peripheral: CH1 = SCK (PB13), CH2 = MOSI (PB15). Cursors mark one SCK
+  period.}{fig:task3}
+
+\begin{table}[htbp]
+  \centering
+  \caption{Quantities read from \cref{fig:task3}.}
+  \label{tab:task3-meas}
+  \begin{tabular}{@{}ll@{}}
+    \toprule
+    \textbf{Quantity} & \textbf{Measured} \\
+    \midrule
+    SCK period $T_\mathrm{SCK}$ & \TSCKMeas~\si{\micro\second} \\
+    SCK frequency $f_\mathrm{SCK} = 1/T_\mathrm{SCK}$ & \fSCKMeas~kHz \\
+    Clock idle state & \fillin{low / high} \\
+    Number of clock cycles & \fillin{8} \\
+    Sampling edge & \fillin{rising / falling} \\
+    Bit order & \fillin{MSB / LSB first} \\
+    Decoded value & \fillin{0x..} \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+\paragraph{Frequency error.}
+\begin{equation}
+  \%\,\mathrm{error}
+  = \frac{\lvert f_\mathrm{measured} - f_\mathrm{predicted}\rvert}{f_\mathrm{predicted}} \times 100
+  = \frac{\lvert \text{\fSCKMeas} - \text{\fSCKPred} \rvert}{\text{\fSCKPred}} \times 100
+  = \text{\fSCKErr}\,\%.
+\end{equation}
+\writeup{One sentence on the likely cause of the error (e.g. HSI oscillator tolerance, cursor placement).}
+
+\paragraph{Manual decoding.}
+MOSI was read at each sampling edge of SCK (\cref{tab:decode}).
+
+\begin{table}[htbp]
+  \centering
+  \caption{Bit-by-bit decoding of the MOSI trace in \cref{fig:task3}.}
+  \label{tab:decode}
+  \begin{tabular}{@{}lcccccccc@{}}
+    \toprule
+    \textbf{Clock edge \#} & 1 & 2 & 3 & 4 & 5 & 6 & 7 & 8 \\
+    \textbf{Bit} & \fillin{b7} & \fillin{b6} & \fillin{b5} & \fillin{b4} & \fillin{b3} & \fillin{b2} & \fillin{b1} & \fillin{b0} \\
+    \textbf{MOSI level} & \fillin{H/L} & \fillin{H/L} & \fillin{H/L} & \fillin{H/L} & \fillin{H/L} & \fillin{H/L} & \fillin{H/L} & \fillin{H/L} \\
+    \textbf{Value} & \fillin{} & \fillin{} & \fillin{} & \fillin{} & \fillin{} & \fillin{} & \fillin{} & \fillin{} \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+\writeup{The decoded byte (hex) and a one-line comparison with $B$. Explain where the sampling edge occurs relative to the data transitions, and how that follows from CPOL/CPHA.}

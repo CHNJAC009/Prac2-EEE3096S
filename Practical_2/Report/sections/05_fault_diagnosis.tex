@@ -1,0 +1,73 @@
+% ============================================================================
+% Section 5: Fault Diagnosis (Task 5)
+% Handout requires: expected-versus-observed table, faulty waveform,
+% corrected waveform, register field responsible, short explanation of the
+% correction. Both captures should use the SAME measurement (RUN_TASK 5 vs 4).
+% Required structure: expected -> measured -> first meaningful difference ->
+% register/field -> correction -> repeated measurement and why it now works.
+% ============================================================================
+\section{Fault Diagnosis}
+\label{sec:fault}
+
+The fault case (\reg{RUN\_TASK}~$=5$) runs the Task~4 program with one
+configuration setting changed; \reg{RUN\_TASK}~$=4$ runs the identical program
+without it. The same measurement was captured in both modes
+(\cref{fig:fault}).
+
+\begin{enumerate}
+  \item \textbf{Expected.} \fillin{waveform / behaviour expected from the EEPROM protocol}
+  \item \textbf{Measured.} \fillin{what the board actually produced (LEDs, status/read values, scope)}
+  \item \textbf{First meaningful difference.} \fillin{the earliest point at which faulty and correct traces differ}
+  \item \textbf{Responsible register and field.} \fillin{register, field, faulty value}
+  \item \textbf{Correction.} \fillin{corrected field value}
+  \item \textbf{Repeated measurement.} \fillin{result after correction and why it now meets the requirement}
+\end{enumerate}
+
+\begin{table}[htbp]
+  \centering
+  \caption{Fault diagnosis summary.}
+  \label{tab:fault}
+  \small
+  \begin{tabularx}{\linewidth}{@{}XXXX@{}}
+    \toprule
+    \textbf{Expected} & \textbf{Observed} & \textbf{Cause} & \textbf{Correction} \\
+    \midrule
+    \fillin{expected} & \fillin{observed} & \fillin{register, field, value} & \fillin{corrected value} \\
+    \bottomrule
+  \end{tabularx}
+\end{table}
+
+\begin{table}[htbp]
+  \centering
+  \caption{Register and result values in the faulty and corrected cases.}
+  \label{tab:fault-regs}
+  \begin{tabular}{@{}lll@{}}
+    \toprule
+    \textbf{Quantity} & \textbf{Faulty (\reg{RUN\_TASK} 5)} & \textbf{Corrected (\reg{RUN\_TASK} 4)} \\
+    \midrule
+    \reg{SPI\_CR1}              & \fillin{0x\ldots} & \fillin{0x\ldots} \\
+    \reg{SPI\_CR2}              & \fillin{0x\ldots} & \fillin{0x\ldots} \\
+    \reg{eeprom\_status\_after} & \fillin{0x..} & \fillin{0x..} \\
+    \reg{eeprom\_read\_value}   & \fillin{0x..} & \fillin{0x..} \\
+    \reg{eeprom\_verify\_ok}    & \fillin{} & \fillin{} \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+\begin{figure}[htbp]
+  \centering
+  \begin{subfigure}[t]{0.48\linewidth}
+    \centering
+    \subscope{task5_faulty.png}{Faulty (\reg{RUN\_TASK}~$=5$).}{fig:fault-bad}
+  \end{subfigure}\hfill
+  \begin{subfigure}[t]{0.48\linewidth}
+    \centering
+    \subscope{task5_corrected.png}{Corrected (\reg{RUN\_TASK}~$=4$).}{fig:fault-good}
+  \end{subfigure}
+  \caption{The same measurement in the faulty and corrected cases:
+    CH1 = \fillin{signal}, CH2 = \fillin{signal}.}
+  \label{fig:fault}
+\end{figure}
+
+\paragraph{Electrical explanation.}
+\writeup{Why the transaction fails electrically with the faulty setting (what the EEPROM samples, and when, compared with what the STM32 drives), and why the corrected setting satisfies the EEPROM's timing requirement. Cite the RM0091 field description and the EEPROM datasheet timing diagram.}
