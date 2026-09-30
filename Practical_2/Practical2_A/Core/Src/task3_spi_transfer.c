@@ -58,7 +58,13 @@ void eeprom_cs_high(void)
 
 uint8_t spi_transfer(uint8_t tx)
 {
-    /* TODO 3.4  Wait until the transmit buffer has room (SPI_SR). */
+    /* TODO 3.4  Wait until the transmit buffer has room (SPI_SR).
+    *
+    * SPI_SR bit 1 = TXE (Transmit buffer Empty)
+    * Must be 1 before writing to DR, otherwise we overwrite
+    * a byte that hasn't been sent yet.
+    * RM0091 Section 28.4.7 SPI status register (SPIx_SR)
+    */
 
     /* TODO 3.5  Write tx to the data register.
      *           HINT: SPI_DR is declared 16 bits wide in the CMSIS header,
