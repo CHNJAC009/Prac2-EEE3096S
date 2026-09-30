@@ -8,10 +8,13 @@
 \section{Non-Blocking FSM}
 \label{sec:fsm}
 
-The Task~4 transaction was restructured as a deterministic finite state machine,
-\reg{update\_eeprom\_state\_machine()}, called once per pass of the main loop
-between \reg{read\_inputs()} and \reg{update\_outputs()}. PA0 starts a
-transaction and PA3 aborts it.
+The Task~4 transaction was restructured as a deterministic finite state machine.
+
+% (The long function name starts its own paragraph so it cannot stick out
+%  into the margin - LaTeX cannot break it across lines.)
+\reg{update\_eeprom\_state\_machine()} performs one step of the machine and is
+called once per pass of the main loop, between \reg{read\_inputs()} and
+\reg{update\_outputs()}. PA0 starts a transaction and PA3 aborts it.
 
 % Option A: export your diagram (draw.io, etc.) to figures/task6_fsm.png.
 % Option B: draw it in TikZ - replace the \scopefig line with a figure
