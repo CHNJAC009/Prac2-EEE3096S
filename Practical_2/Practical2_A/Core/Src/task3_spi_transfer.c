@@ -33,7 +33,7 @@ void eeprom_cs_high(void)
      * 2. BSY (bit 7 of SPI_SR) = 0 → shift register is finished
      *    This is the definitive "last bit has left the pin" flag.
      *    Raising CS before BSY clears will cut the end off the frame.
-     * RM0091 Section 27.3.9 "Disabling the SPI" lists this exact sequence.
+     * RM0091 Section 27.3.8 "Disabling the SPI" lists this exact sequence.
      */
     
     /* Wait for transmit buffer empty */
@@ -63,7 +63,7 @@ uint8_t spi_transfer(uint8_t tx)
     * SPI_SR bit 1 = TXE (Transmit buffer Empty)
     * Must be 1 before writing to DR, otherwise we overwrite
     * a byte that hasn't been sent yet.
-    * RM0091 Section 27.3.9 SPI status register (SPIx_SR)
+    * RM0091 Section 27.3.9 and Section 27.7.3 SPI status register (SPIx_SR)
     */
 
     while (!(EE_SPI->SR & SPI_SR_TXE))
@@ -81,7 +81,7 @@ uint8_t spi_transfer(uint8_t tx)
      * The CMSIS header declares SPI_DR as uint16_t. If you write a
      * 16-bit value, the STM32 sends 16 clock pulses instead of 8.
      * A uint8_t pointer forces an 8-bit bus write → exactly 8 clocks.
-     * RM0091 Section 27.4.7 SPI data register (SPIx_DR)
+     * RM0091 Section 27.7.4 SPI data register (SPIx_DR)
      */
     *((volatile uint8_t *)&EE_SPI->DR) = tx;
 
@@ -94,7 +94,7 @@ uint8_t spi_transfer(uint8_t tx)
      * Must read DR every transfer even if the value is not needed,
      * otherwise the receive buffer overflows and RXNE stays set,
      * blocking the next TXE wait.
-     * RM0091 Section 28.4.7 SPI status register (SPIx_SR)
+     * RM0091 Section 27.7.3 SPI status register (SPIx_SR)
      */
     
     while (!(EE_SPI->SR & SPI_SR_RXNE))
