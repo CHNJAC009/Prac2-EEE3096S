@@ -9,9 +9,10 @@
 %      figures/README.md. Until a file exists, a red placeholder box is shown.
 %   3. Replace every red \fillin{...} and \writeup{...} in sections/*.tex.
 %      Search the project for "fillin" and "writeup" to find what is left.
-%   4. Compiler: pdfLaTeX. Bibliography: Biber (Overleaf default).
-%   5. Download the PDF and rename it prac_02_stdnum001_stdnum002.pdf
-%      (your two student numbers) before uploading to Gradescope.
+%   4. Build in VS Code (LaTeX Workshop, latexmk + Biber) - see LaTeXREADME.md.
+%      The PDF is written to build/main.pdf.
+%   5. For submission, copy build/main.pdf to prac_02_CHNJAC009_SBYSIB014.pdf
+%      and upload that to Gradescope.
 % ============================================================================
 \documentclass[11pt,a4paper]{article}
 
@@ -21,6 +22,9 @@
 \usepackage[utf8]{inputenc}
 \usepackage{lmodern}
 \usepackage{microtype}
+% Long unbreakable code names (e.g. update_eeprom_state_machine()) would
+% otherwise stick out into the margin; allow a little extra word spacing.
+\setlength{\emergencystretch}{3em}
 
 % ---- Maths, units, tables ---------------------------------------------------
 \usepackage{amsmath}
@@ -54,7 +58,7 @@
 
 % Paragraph to write: shows the prompt in a red box until replaced.
 \newcommand{\writeup}[1]{%
-  \par\noindent\fcolorbox{red}{red!4}{\parbox{\dimexpr\linewidth-2\fboxsep-2\fboxrule}{%
+  \leavevmode\par\noindent\fcolorbox{red}{red!4}{\parbox{\dimexpr\linewidth-2\fboxsep-2\fboxrule}{%
     \small\textcolor{red!70!black}{\textbf{Write:} #1}}}\par}
 
 % Register / code names in running text.

@@ -32,7 +32,9 @@ RemoteSystemsTempFiles/
 *\(*\).launch
 
 # ---- Editors / OS ---------------------------------------------------------
-.vscode/
+.vscode/*
+# ...except the shared LaTeX Workshop build settings for the report
+!/.vscode/settings.json
 .idea/
 *.swp
 *~
@@ -41,7 +43,11 @@ Thumbs.db
 desktop.ini
 ~$*
 
-# ---- LaTeX report build files (if the report lives in the repo) ----------
+# ---- LaTeX report build files ---------------------------------------------
+# (latexmk puts everything in Practical_2/Report/build/, ignored above;
+#  these catch stray files from a build run without the settings)
+# Renamed submission copy of the PDF - submitted to Gradescope, not committed
+/Practical_2/Report/*.pdf
 *.aux
 *.bbl
 *.blg
@@ -53,7 +59,7 @@ desktop.ini
 *.toc
 *.bcf
 *.run.xml
-# Overleaf upload bundle (regenerated from Practical_2/Report/)
+# Zip bundles (generated copies, not sources)
 *.zip
 
 # ---- Local-only files -----------------------------------------------------
