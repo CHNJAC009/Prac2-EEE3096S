@@ -24,20 +24,25 @@ void eeprom_cs_high(void)
      *           status flags to wait for (see its procedure for disabling the
      *           SPI). Raising CS early cuts the end off a command.
      * 
-     * Two conditions must BOTH be true before CS can go HIGH:
+     * RM0091 §28.5.9 "Procedure for disabling the SPI", p.767-768:
+     *   "1. Wait until FTLVL[1:0] = 00 (no more data to transmit).
+     *    2. Wait until BSY=0 (the last data frame is processed)."
+     * Both must be true before CS can go HIGH:
      *
-     * 1. TXE (bit 1 of SPI_SR) = 1 → transmit buffer is empty
-     *    This means software can write the next byte, but the shift
-     *    register may still be clocking out the current byte.
+     * 1. FTLVL[1:0] (bits 12:11 of SPI_SR) = 00 → TX FIFO is empty
+     *    Nothing is left queued to send. NOT the same as TXE: TXE = 1
+     *    whenever the FIFO is at most half full (RM0091 §28.5.10 p.776),
+     *    so TXE can be 1 with 1-2 bytes still waiting.
      *
      * 2. BSY (bit 7 of SPI_SR) = 0 → shift register is finished
-     *    This is the definitive "last bit has left the pin" flag.
+     *    The last bit has left the pin. Checked AFTER FTLVL, as the SR
+     *    description warns "The BSY flag must be used with caution".
      *    Raising CS before BSY clears will cut the end off the frame.
-     * RM0091 Section 27.3.8 "Disabling the SPI" lists this exact sequence.
+     * RM0091 §28.9.3 SPI status register (SPIx_SR), p.806
      */
-    
-    /* Wait for transmit buffer empty */
-    while (!(EE_SPI->SR & SPI_SR_TXE))
+
+    /* Wait for TX FIFO empty (FTLVL = 00) */
+    while (EE_SPI->SR & (3UL << 11))    /* FTLVL[1:0] bits 12:11, (3UL << 11) same as SPI_SR_FTLVL mask */
     {
         /* spin */
     }
@@ -91,21 +96,26 @@ uint8_t spi_transfer(uint8_t tx)
      * 
      * SPI_SR bit 0 = RXNE (Receive buffer Not Empty)
      * The SPI peripheral shifts in a byte for every byte it shifts out.
+     * With FRXTH = 1 (TODO 2.8), RXNE goes high once the RX FIFO holds
+     * 1 byte - RM0091 §28.5.10 "SPI status flags", p.776.
      * Must read DR every transfer even if the value is not needed,
-     * otherwise the receive buffer overflows and RXNE stays set,
-     * blocking the next TXE wait.
-     * RM0091 Section 27.7.3 SPI status register (SPIx_SR)
+     * otherwise the RX FIFO fills up and the next received byte is
+     * discarded with OVR set - RM0091 §28.5.11 "Overrun flag", p.777.
+     * RM0091 §28.9.3 SPI status register (SPIx_SR), p.806
      */
-    
+
     while (!(EE_SPI->SR & SPI_SR_RXNE))
     {
         /* spin until received byte is ready */
     }
 
-    return (uint8_t)EE_SPI->DR;
-
-    //(void)tx;
-    //return 0u;
+    /* Read DR as an 8-bit access, same reason as the write in TODO 3.5.
+     * A 16-bit read (e.g. (uint8_t)EE_SPI->DR - the cast only happens AFTER
+     * the 16-bit bus read) triggers data packing: "data packing is used
+     * automatically when any read or write 16-bit access is performed on the
+     * SPIx_DR register" - it tries to pop TWO bytes from the RX FIFO.
+     * RM0091 §28.5.9 "Data packing", p.768; §28.9.4 SPIx_DR, p.807 */
+    return *((volatile uint8_t *)&EE_SPI->DR);
 }
 
 /* ==========================================================================
