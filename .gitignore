@@ -67,7 +67,3 @@ desktop.ini
 CLAUDE.md
 CLAUDE.local.md
 .claude/
-
-# Duplicate of Practical_2/Practical2_A/prac_02.pdf (already tracked), and the
-# reference manuals/datasheets kept in the repo root (large, downloadable from ST)
-/*.pdf
