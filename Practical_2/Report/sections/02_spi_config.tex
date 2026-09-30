@@ -3,18 +3,28 @@
 % Handout requires: the Task 2 configuration table, the SPI clock calculation,
 % the relevant alternate-function information, and the manual sections or
 % datasheet tables used (for EVERY register field).
+%
+% Everything here is filled from Core/Inc/board_config.h,
+% Core/Src/task2_spi_config.c and the continuity test. The ONLY things left
+% red are the "Read in debugger" column of the last table: run RUN_TASK 2,
+% read the dbg_* Live Expressions and type the values in.
 % ============================================================================
 \section{Hardware SPI Configuration}
 \label{sec:spi-config}
 
 The EEPROM is driven by the STM32 hardware SPI peripheral, configured entirely
-through its registers (no HAL/LL SPI functions or CubeMX configuration).
+through its registers in \reg{eeprom\_spi\_init()}; no HAL/LL SPI functions or
+CubeMX configuration are used.
 
 \paragraph{Pin mapping.}
-The handout's pin table is inconsistent with the STM32F051 alternate-function
-assignments. The mapping used (Practical 2 README~\cite{readme}) was confirmed by
-continuity measurement with the board unpowered and the P2 jumpers removed
-(\cref{tab:pins}).
+The handout's pin table (PB13 = SO, PB14 = SI, PB15 = SCK) cannot be correct:
+the STM32F051 fixes the SPI2 functions on these pins in silicon
+\cite[Tab.~15]{stm32f051ds}. The mapping in the Practical~2
+README~\cite{readme} was therefore checked by continuity, with the board
+unpowered and the P2 loopback jumpers removed. EEPROM pins 8 (VCC) and 4 (VSS)
+were checked against 3V3 and GND first, to confirm the pin numbering
+\cite[p.~1]{eeprom}. The measured mapping (\cref{tab:pins}) agrees with the
+README and with the AF0 column of \cite[Tab.~15]{stm32f051ds}.
 
 \begin{table}[htbp]
   \centering
@@ -24,80 +34,131 @@ continuity measurement with the board unpowered and the P2 jumpers removed
     \toprule
     \textbf{EEPROM pin} & \textbf{Function} & \textbf{STM32 pin} & \textbf{SPI signal} & \textbf{Continuity} \\
     \midrule
-    1 & CS\#                   & PB12 & GPIO chip select & \fillin{beep / no beep} \\
-    6 & SCK                    & PB13 & SCK             & \fillin{beep / no beep} \\
-    2 & SO (data out of EEPROM) & PB14 & MISO            & \fillin{beep / no beep} \\
-    5 & SI (data into EEPROM)   & PB15 & MOSI            & \fillin{beep / no beep} \\
+    1 & CS\#                    & PB12     & GPIO chip select & beep \\
+    6 & SCK                     & PB13     & SPI2\_SCK        & beep \\
+    2 & SO (data out of EEPROM) & PB14     & SPI2\_MISO       & beep \\
+    5 & SI (data into EEPROM)   & PB15     & SPI2\_MOSI       & beep \\
     \midrule
-    \fillin{VCC pin} & VCC & 3V3 rail & -- & \fillin{beep / no beep} \\
-    \fillin{VSS pin} & VSS & GND      & -- & \fillin{beep / no beep} \\
+    8 & VCC                     & 3V3 rail & --               & beep \\
+    4 & VSS                     & GND      & --               & beep \\
     \bottomrule
   \end{tabular}
 \end{table}
 
 \paragraph{Configuration.}
-\Cref{tab:spi-config} is the configuration table required by the handout, with
-the additional fields needed for correct operation below the rule.
+\Cref{tab:spi-config} is the configuration table required by the handout
+(above the rule), followed by the other fields needed for correct operation.
 
 \begin{table}[htbp]
   \centering
   \caption{SPI configuration, with the source of each value.}
   \label{tab:spi-config}
   \small
-  \begin{tabularx}{\linewidth}{@{}l l X >{\raggedright\arraybackslash}p{3.3cm}@{}}
+  \begin{tabularx}{\linewidth}{@{}l l X >{\raggedright\arraybackslash}p{3.1cm}@{}}
     \toprule
     \textbf{Item} & \textbf{Value} & \textbf{Justification} & \textbf{Source} \\
     \midrule
-    SPI peripheral instance   & \SPIInstance & \fillin{why this instance} & \fillin{DS Tab.~x} \\
-    Peripheral clock frequency & \PCLKMHz~MHz & \fillin{clock tree from SystemClock\_Config()} & \fillin{RM0091 \S x} \\
-    PB13 alternate function    & \SPIAF & \fillin{SPIx\_SCK} & \fillin{DS Tab.~x} \\
-    PB14 alternate function    & \SPIAF & \fillin{SPIx\_MISO} & \fillin{DS Tab.~x} \\
-    PB15 alternate function    & \SPIAF & \fillin{SPIx\_MOSI} & \fillin{DS Tab.~x} \\
-    Clock divider              & $\div$\BRDivider{} (BR = \BRBits) & \fillin{see \cref{eq:sck}} & \fillin{RM0091 \S x} \\
-    Predicted SCK frequency    & \fSCKPred~kHz & \cref{eq:sck} & -- \\
-    CPOL                       & \fillin{0/1} & \fillin{EEPROM SPI mode support} & \fillin{EEPROM DS; RM0091 \S x} \\
-    CPHA                       & \fillin{0/1} & \fillin{data sampled on which edge} & \fillin{EEPROM DS; RM0091 \S x} \\
-    Bit order                  & \fillin{MSB/LSB first} & \fillin{EEPROM expects \ldots} & \fillin{EEPROM DS; RM0091 \S x} \\
+    SPI peripheral instance    & \SPIInstance
+      & The only SPI peripheral available on PB13--PB15
+      & \cite[Tab.~15, p.~38]{stm32f051ds} \\
+    Peripheral clock frequency & \PCLKMHz~MHz
+      & HSI 8~MHz, AHB $\div$1, APB $\div$1 (\reg{SystemClock\_Config()}); SPI2 is on the APB bus, clocked by PCLK
+      & \cite[\S6.2, \S6.4.2, Tab.~1]{rm0091} \\
+    PB13 alternate function    & \SPIAF & AF0 on PB13 is SPI2\_SCK
+      & \cite[Tab.~15]{stm32f051ds} \\
+    PB14 alternate function    & \SPIAF & AF0 on PB14 is SPI2\_MISO
+      & \cite[Tab.~15]{stm32f051ds} \\
+    PB15 alternate function    & \SPIAF & AF0 on PB15 is SPI2\_MOSI
+      & \cite[Tab.~15]{stm32f051ds} \\
+    Clock divider              & $\div$\BRDivider{} (BR[2:0] = \texttt{\BRBits})
+      & $8~\text{MHz}/250~\text{kHz} = 32 = 2^5$, an exact available divisor (\cref{eq:sck})
+      & \cite[\S28.9.1, p.~802]{rm0091} \\
+    Predicted SCK frequency    & \fSCKPred~kHz & \Cref{eq:sck}; checked at build time by a \reg{\_Static\_assert} & -- \\
+    CPOL                       & 0 (SCK idles low)
+      & EEPROM supports SPI modes (0,0) and (1,1) only
+      & \cite[pp.~1,~5]{eeprom}; \cite[\S28.9.1]{rm0091} \\
+    CPHA                       & 0 (capture on 1st edge)
+      & With CPOL = 0 the 1st edge is rising; the EEPROM latches SI on the rising edge
+      & \cite[p.~5]{eeprom}; \cite[\S28.5.6]{rm0091} \\
+    Bit order                  & MSB first (LSBFIRST = 0)
+      & EEPROM timing diagrams send opcode, address and data MSB first
+      & \cite[Figs.~3, 5]{eeprom}; \cite[\S28.9.1]{rm0091} \\
     \midrule
-    Master mode (MSTR)         & \fillin{} & \fillin{STM32 generates SCK} & \fillin{RM0091 \S x} \\
-    NSS management (SSM, SSI)  & \fillin{} & \fillin{CS on GPIO; avoid MODF} & \fillin{RM0091 \S x} \\
-    Data size (DS[3:0])        & \fillin{} & \fillin{8-bit frames} & \fillin{RM0091 \S x} \\
-    RX FIFO threshold (FRXTH)  & \fillin{} & \fillin{RXNE after 8 bits} & \fillin{RM0091 \S x} \\
-    GPIO mode / AFRH (PB13--15) & \fillin{} & \fillin{alternate function, AF number} & \fillin{RM0091 \S x} \\
-    PB12 (CS)                  & \fillin{output, high} & \fillin{why CS starts high} & \fillin{} \\
-    Speed / pull-up            & \fillin{} & \fillin{MISO pull-up while EEPROM SO is high-Z} & \fillin{RM0091 \S x} \\
+    Master mode                & MSTR = 1 & The STM32 generates SCK
+      & \cite[\S28.9.1]{rm0091} \\
+    NSS management             & SSM = 1, SSI = 1
+      & CS is a plain GPIO; internal NSS held high so no mode fault (MODF) forces slave mode
+      & \cite[\S28.5.5, p.~762]{rm0091} \\
+    Data size                  & DS[3:0] = \texttt{0111} & 8-bit frames
+      & \cite[\S28.9.2, p.~804]{rm0091} \\
+    RX FIFO threshold          & FRXTH = 1
+      & RXNE after 8 bits; at reset (16 bits) RXNE never sets for a single byte
+      & \cite[\S28.9.2, p.~804]{rm0091} \\
+    GPIO mode (PB13--15)       & MODER = \texttt{10}, AFSEL = \texttt{0000}
+      & Alternate-function mode, AF0 selected in AFRH (\reg{AFR[1]})
+      & \cite[\S8.4.1, \S8.4.10]{rm0091} \\
+    PB12 (CS)                  & MODER = \texttt{01}, high
+      & General-purpose output, set high (BSRR) \emph{before} switching to output
+      & \cite[\S8.4.1, \S8.4.7]{rm0091} \\
+    Speed / pull-up            & OSPEEDR = \texttt{11}; PUPDR = \texttt{01}
+      & High speed on SCK and MOSI; pull-up on MISO, which floats while CS is high
+      & \cite[\S8.4.3, \S8.4.4]{rm0091}; \cite[p.~5]{eeprom} \\
     \bottomrule
   \end{tabularx}
 \end{table}
 
 \paragraph{SPI clock calculation.}
-The SPI kernel clock is PCLK1 $=$ \PCLKHz~Hz. The baud-rate field BR[2:0] of
-\reg{SPI\_CR1} divides it by $2^{\mathrm{BR}+1}$~\cite{rm0091}:
+\reg{SystemClock\_Config()} selects the 8~MHz HSI oscillator as SYSCLK with the
+PLL off \cite[\S6.2.2]{rm0091}, and sets both the AHB (HPRE) and APB (PPRE)
+prescalers to $\div$1 \cite[\S6.4.2]{rm0091}. SPI2 lies on the APB bus
+\cite[Tab.~1]{rm0091}, and APB peripherals are clocked by PCLK
+\cite[\S6.2]{rm0091}, so $f_\mathrm{PCLK} = \PCLKHz$~Hz. The BR[2:0] field of
+\reg{SPI\_CR1} divides PCLK by $2^{\mathrm{BR}+1}$ \cite[\S28.9.1]{rm0091}:
 \begin{equation}
-  f_\mathrm{SCK} = \frac{f_\mathrm{PCLK1}}{2^{\mathrm{BR}+1}}
-                 = \frac{\text{\PCLKHz~Hz}}{\text{\BRDivider}}
-                 = \text{\fSCKPred~kHz}.
+  f_\mathrm{SCK} = \frac{f_\mathrm{PCLK}}{2^{\mathrm{BR}+1}}
+                 = \frac{8~\text{MHz}}{2^{\BRDec+1}}
+                 = \frac{8~\text{MHz}}{\BRDivider}
+                 = \fSCKPred~\text{kHz}.
   \label{eq:sck}
 \end{equation}
-\writeup{One or two sentences on why this divider was chosen for $\approx$250~kHz (and the static assert in main.c that confirms it).}
+The required ratio $8~\text{MHz}/250~\text{kHz} = 32 = 2^5$ is exactly one of the
+available divisors, so BR = \texttt{\BRBits} gives 250~kHz with no rounding. The
+value was calculated, not tuned: a \reg{\_Static\_assert} in \reg{main.c} fails the
+build unless the predicted frequency is exactly 250~kHz.
+
+\paragraph{Alternate functions and chip select.}
+MODER on its own only hands a pin to ``a peripheral''; the 4-bit AFSEL field
+selects which one. For pins 8--15 this field is in \reg{GPIOx\_AFRH}
+(\reg{AFR[1]} in the CMSIS header), so PB13--PB15 use AFSEL13--15 = AF0.
+PB12 is not given to SPI2: chip select is driven by software so the driver
+controls exactly where each EEPROM transaction starts and ends. CS is active
+low, so it is held high from start-up to keep the EEPROM deselected while the
+bus is configured and while the Task~3 test byte is sent; the output level is
+written before the pin becomes an output so that it never glitches low.
 
 \paragraph{Register values after configuration.}
-\Cref{tab:spi-regs} lists the register contents read in the debugger
-(\reg{dbg\_*} variables / SFR view) with \reg{RUN\_TASK}~$=2$.
+\Cref{tab:spi-regs} gives the register contents predicted from the code and those
+read in the debugger (\reg{dbg\_*} Live Expressions) with \reg{RUN\_TASK}~$=2$.
 
+% TODO: run RUN_TASK 2 in the debugger and replace the red values in the last
+% column with what Live Expressions shows (dbg_gpiob_moder, dbg_gpiob_afrh,
+% dbg_spi_cr1, dbg_spi_cr2, dbg_spi_sr; OSPEEDR/PUPDR from the SFRs view).
 \begin{table}[htbp]
   \centering
-  \caption{Configuration registers read back in the debugger.}
+  \caption{Configuration registers: predicted and read in the debugger.}
   \label{tab:spi-regs}
-  \begin{tabularx}{\linewidth}{@{}l l X@{}}
+  \small
+  \begin{tabularx}{\linewidth}{@{}l l l X@{}}
     \toprule
-    \textbf{Register} & \textbf{Value} & \textbf{Fields decoded} \\
+    \textbf{Register} & \textbf{Predicted} & \textbf{Read} & \textbf{Fields decoded} \\
     \midrule
-    \reg{GPIOB\_MODER} & \fillin{0x\ldots} & \fillin{PB12 = 01, PB13--15 = 10, \ldots} \\
-    \reg{GPIOB\_AFRH}  & \fillin{0x\ldots} & \fillin{AFSEL13/14/15 = \ldots} \\
-    \reg{SPI\_CR1}     & \fillin{0x\ldots} & \fillin{MSTR, BR, CPOL, CPHA, LSBFIRST, SSM, SSI, SPE} \\
-    \reg{SPI\_CR2}     & \fillin{0x\ldots} & \fillin{DS, FRXTH} \\
-    \reg{SPI\_SR}      & \fillin{0x\ldots} & \fillin{TXE, RXNE, BSY, MODF} \\
+    \reg{GPIOB\_MODER}   & \texttt{0xA9000000} & \fillin{0x\ldots} & MODER15..12 = \texttt{10 10 10 01} \\
+    \reg{GPIOB\_AFRH}    & \texttt{0x00000000} & \fillin{0x\ldots} & AFSEL13--15 = \texttt{0000} (AF0) \\
+    \reg{GPIOB\_OSPEEDR} & \texttt{0xCC000000} & \fillin{0x\ldots} & OSPEEDR15, 13 = \texttt{11} \\
+    \reg{GPIOB\_PUPDR}   & \texttt{0x10000000} & \fillin{0x\ldots} & PUPDR14 = \texttt{01} \\
+    \reg{SPI2\_CR1}      & \texttt{0x00000364} & \fillin{0x\ldots} & SSM = SSI = 1, LSBFIRST = 0, SPE = 1, BR = \texttt{100}, MSTR = 1, CPOL = CPHA = 0 \\
+    \reg{SPI2\_CR2}      & \texttt{0x00001700} & \fillin{0x\ldots} & FRXTH = 1, DS = \texttt{0111} \\
+    \reg{SPI2\_SR}       & \texttt{0x00000002} & \fillin{0x\ldots} & TXE = 1; BSY = MODF = RXNE = 0 \\
     \bottomrule
   \end{tabularx}
 \end{table}
