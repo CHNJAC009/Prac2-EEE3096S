@@ -21,7 +21,7 @@ With $n_1 = \nOne$ and $n_2 = \nTwo$:
 \end{align}
 $B$ is neither 0x00 nor 0xFF, so $B = \text{\BHex} = \texttt{\BBin}_2$.
 
-\scopefig{task3_sck_mosi.png}{$B$ transmitted with CS high: CH1 = SCK (PB13),
+\scopefig{task3_sck_mosi.jpeg}{$B$ transmitted with CS high: CH1 = SCK (PB13),
   CH2 = MOSI (PB15).}{fig:task3}
 
 \paragraph{SCK frequency.}
@@ -46,9 +46,9 @@ MOSI was read at each rising SCK edge (CPOL = 0, CPHA = 0), MSB first
     \toprule
     \textbf{Bit}  & b7 & b6 & b5 & b4 & b3 & b2 & b1 & b0 \\
     \midrule
-    \textbf{MOSI} & \fillin{} & \fillin{} & \fillin{} & \fillin{} & \fillin{} & \fillin{} & \fillin{} & \fillin{} \\
+    \textbf{MOSI} & \fillin{0} & \fillin{1} & \fillin{0} & \fillin{0} & \fillin{0} & \fillin{1} & \fillin{0} & \fillin{0} \\
     \bottomrule
   \end{tabular}
 \end{table}
 
-The decoded value is \fillin{0x..}.
+The decoded value is \fillin{0x44}.
