@@ -225,6 +225,7 @@ void leds_write_byte(uint8_t v)
      * RESET bits where v = 0:  (~v & 0xFF) in upper 16
      * This leaves PB8..PB15 completely untouched.
      */
+
     GPIOB->BSRR = ((uint32_t)(v))                       /* SET   high bits */
                 | ((uint32_t)(~v & 0xFFu) << 16u);      /* RESET low  bits */
 }
