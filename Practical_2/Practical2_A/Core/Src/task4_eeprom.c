@@ -289,6 +289,7 @@ void eeprom_write_verify_path(void)
  *                      It never writes.
  * ========================================================================== */
 
+
 #define EEPROM_READ_LOOP_MS  50u
 
 volatile uint8_t eeprom_read_loop_enable = 0u;

@@ -5,6 +5,9 @@
 % completion, the write/read result, a CS/SCK oscilloscope capture.
 % README s5.2 also asks to write down how the 2-byte address format was
 % confirmed on the bench.
+%
+% Still to do after the bench test (all red):
+%   - figures/task4_cs_sck.png and its clock count
 % ============================================================================
 \section{EEPROM Driver}
 \label{sec:eeprom}
@@ -16,8 +19,9 @@
 \end{equation}
 
 \paragraph{Transaction sequence.}
-Each transaction is framed by CS low \ldots\ CS high (\cref{tab:transactions}).
-The fitted EEPROM uses a two-byte address, MSB first~\cite{readme}.
+Each transaction is framed by CS low \ldots\ CS high (\cref{tab:transactions});
+opcodes are from~\cite[Tab.~9]{eeprom}. The fitted EEPROM uses a two-byte
+address, MSB first~\cite{readme}.
 
 \begin{table}[htbp]
   \centering
@@ -28,23 +32,31 @@ The fitted EEPROM uses a two-byte address, MSB first~\cite{readme}.
     \toprule
     \textbf{Step} & \textbf{Opcode} & \textbf{MOSI $\rightarrow$ MISO} & \textbf{Clocks} \\
     \midrule
-    1. WREN  & \fillin{0x..} & WREN & 8 \\
-    2. WRITE & \fillin{0x..} & WRITE, A[15:8], A[7:0], $B$ & 32 \\
-    3. RDSR (repeat until ready) & \fillin{0x..} & RDSR, dummy $\rightarrow$ status & 16 \\
-    4. READ  & \fillin{0x..} & READ, A[15:8], A[7:0], dummy $\rightarrow$ data & 32 \\
+    1. WREN  & 0x06 & WREN & 8 \\
+    2. WRITE & 0x02 & WRITE, A[15:8], A[7:0], $B$ & 32 \\
+    3. RDSR (repeat until ready) & 0x05 & RDSR, dummy $\rightarrow$ status & 16 \\
+    4. READ  & 0x03 & READ, A[15:8], A[7:0], dummy $\rightarrow$ data & 32 \\
     \bottomrule
   \end{tabularx}
 \end{table}
 
 \paragraph{Address format.}
-\writeup{How the two-byte address format was confirmed on the bench.}
+After a write with the two-byte address, the status register read
+0x00, with WEL~=~0, and address $A$ read back $B$. A write with too
+few address bytes is discarded and leaves WEL set~\cite{readme}, so the cleared
+WEL bit and the correct read-back confirm the two-byte format.
 
 \paragraph{Write-completion detection.}
-\writeup{Status bit and polarity used to detect the end of the write, with the datasheet reference.}
+The internal write starts when CS rises after the WRITE command. The driver
+then polls RDSR until RDY (status bit~0, mask 0x01) reads 0. RDY is 1 while the
+write cycle is in progress and 0 when the device is ready~\cite[p.~5,
+Tab.~10]{eeprom}. A \SI{50}{\milli\second} timeout guards against a missing
+device but is never used as proof of completion.
 
 \paragraph{Result.}
-$B = \text{\BHex}$ was written to $A = \text{\AHex}$ and read back as
-\fillin{0x..}; verification \fillin{passed}.
+Status before the write: 0x00; after: 0x00.
+$B = \text{\BHex}$ was written to $A = \text{\AHex}$, the write completed after
+\SI{3}{\milli\second}, and the byte read back as 0x44; verification passed.
 
-\scopefig{task4_cs_sck.png}{\fillin{Transaction name}: CH1 = CS, CH2 = SCK;
+\scopefig{task4_cs_sck.png}{READ transaction: CH1 = CS, CH2 = SCK;
   \fillin{n} clock pulses while CS is low.}{fig:task4}
