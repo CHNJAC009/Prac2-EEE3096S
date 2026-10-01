@@ -108,18 +108,18 @@
 
 /* TODO 4.1  Instruction opcodes, from the EEPROM datasheet's instruction set
  *           table. */
-#define EEPROM_CMD_WREN         0x00u       /* <- TODO */
-#define EEPROM_CMD_WRDI         0x00u       /* <- TODO */
-#define EEPROM_CMD_RDSR         0x00u       /* <- TODO */
-#define EEPROM_CMD_WRSR         0x00u       /* <- TODO */
-#define EEPROM_CMD_READ         0x00u       /* <- TODO */
-#define EEPROM_CMD_WRITE        0x00u       /* <- TODO */
+#define EEPROM_CMD_WREN         0x6u       /* <- TODO */
+#define EEPROM_CMD_WRDI         0x4u       /* <- TODO */
+#define EEPROM_CMD_RDSR         0x5u       /* <- TODO */
+#define EEPROM_CMD_WRSR         0x1u       /* <- TODO */
+#define EEPROM_CMD_READ         0x3u       /* <- TODO */
+#define EEPROM_CMD_WRITE        0x2u       /* <- TODO */
 
 /* TODO 4.2  Status register bit MASKS, from the datasheet's status register
  *           table. Which bit says a write is in progress - and is it 1 or 0
  *           while the device is busy? Which bit is the write enable latch? */
-#define EEPROM_SR_RDY           0x00u       /* <- TODO: busy bit mask       */
-#define EEPROM_SR_WEL           0x00u       /* <- TODO                      */
+#define EEPROM_SR_RDY           0x01u       /* <- TODO: busy bit mask       */
+#define EEPROM_SR_WEL           0x02u       /* <- TODO                      */
 
 /* Upper bound on waiting for a write. A hang guard only: completion must be
  * decided from the status register, never from elapsed time. */
