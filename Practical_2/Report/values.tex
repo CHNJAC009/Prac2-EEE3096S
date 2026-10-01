@@ -10,26 +10,26 @@
 % ============================================================================
 
 % ---- Group ------------------------------------------------------------------
-\newcommand{\StudentOneName}{Jacob Cohen}
-\newcommand{\StudentOneNumber}{CHNJAC009}
-\newcommand{\StudentTwoName}{Sibongokuhle Sibiya}
-\newcommand{\StudentTwoNumber}{SBYSIB014}
+\newcommand{\StudentOneName}{Sibongokuhle Sibiya}
+\newcommand{\StudentOneNumber}{SBYSIB014}
+\newcommand{\StudentTwoName}{Jacob Cohen}
+\newcommand{\StudentTwoNumber}{CHNJAC009}
 
 % ---- Group numbers (Task 3 / Task 4) ---------------------------------------
-% n1 = last three digits of STUDENT 1 (CHNJAC009 -> 009 -> 9)
-% n2 = last three digits of STUDENT 2 (SBYSIB014 -> 014 -> 14)
+% n1 = last three digits of STUDENT 1 (SBYSIB014 -> 014 -> 14)
+% n2 = last three digits of STUDENT 2 (CHNJAC009 -> 009 -> 9)
 % These must match STUDENT_N1 / STUDENT_N2 in board_config.h (write them
 % there WITHOUT leading zeros: 009 in C is octal and 014 is 12!).
-\newcommand{\nOne}{9}
-\newcommand{\nOneBin}{0000\,1001}
-\newcommand{\nTwo}{14}
-\newcommand{\nTwoBin}{0000\,1110}
+\newcommand{\nOne}{14}
+\newcommand{\nOneBin}{0000\,1110}
+\newcommand{\nTwo}{9}
+\newcommand{\nTwoBin}{0000\,1001}
 \newcommand{\XorDec}{7}                    % n1 XOR n2
 \newcommand{\XorBin}{0000\,0111}
 \newcommand{\BHex}{0x44}                   % B = (7 + 0x3D) mod 256
 \newcommand{\BBin}{0100\,0100}
-\newcommand{\ADec}{51}                     % A = (9 + 3*14) mod 256
-\newcommand{\AHex}{0x33}
+\newcommand{\ADec}{41}                     % A = (14 + 3*9) mod 256
+\newcommand{\AHex}{0x29}
 
 % ---- SPI configuration (Task 2) --------------------------------------------
 % Numbers only - the units are added in the text.

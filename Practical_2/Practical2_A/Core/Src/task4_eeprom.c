@@ -96,16 +96,22 @@ void eeprom_write_byte(uint16_t address, uint8_t value)
      *           data byte, and deselect. From the datasheet: at what moment
      *           does the EEPROM actually start writing? 
      * Step 1: Send WREN as a separate transaction (sets WEL bit on CS rise)
-     * Step 2: Write transaction (datasheet Figure 5 - Byte WRITE timing):
+     * Step 2: Write transaction (CAT25010 Figure 5 - Byte WRITE timing, p.7,
+     *         with the address phase of the fitted part, README §5.2):
      *   1. Assert CS LOW
-     *   2. Send WRITE opcode (0x02)
-     *      For CAT25040: bit 3 of opcode = A8 (9th address bit)
-     *      address >> 8 gives A8 for addresses > 255
-     *   3. Send 8-bit address (A7..A0)
+     *   2. Send WRITE opcode (0x02) on its own
+     *   3. Send address high byte (A15..A8), then low byte (A7..A0)
+     *      - EEPROM_ADDR_BYTES = 2, MSB first (board_config.h / README §5.2)
      *   4. Send data byte
      *   5. Deassert CS HIGH
      *
-     * FROM DATASHEET:
+     * ADDRESS FORMAT: the handout's CAT25040 uses ONE address byte and puts
+     * A8 in bit 3 of the opcode. The part fitted to this board does NOT: it
+     * takes TWO address bytes, MSB first (README §5.2). With only one address
+     * byte the data byte is taken as the address low byte, CS rises before
+     * any data arrives, the write is thrown away and WEL stays set.
+     *
+     * FROM DATASHEET (CAT25010 "Byte Write", p.7):
      * "Internal programming will start after the LOW to HIGH CS transition."
      * The EEPROM starts writing internally the moment CS goes HIGH.
      */
@@ -115,12 +121,12 @@ void eeprom_write_byte(uint16_t address, uint8_t value)
     /* Step 2: Send WRITE command with address and data */
     eeprom_cs_low();
 
-    /* Opcode: for CAT25040, bit 3 carries A8 (9th address bit)
-     * WRITE opcode = 0x02, OR with (A8 << 3) if address > 255 */
-    spi_transfer(EEPROM_CMD_WRITE | (uint8_t)((address >> 5u) & 0x08u));
+    /* Opcode on its own - no address bits packed into it on this part */
+    spi_transfer(EEPROM_CMD_WRITE);
 
-    /* Send 8-bit address (A7..A0) */
-    spi_transfer((uint8_t)(address & 0xFFu));
+    /* Address, 2 bytes, MSB first (README §5.2) */
+    spi_transfer((uint8_t)((address >> 8) & 0xFFu));    /* A15..A8 */
+    spi_transfer((uint8_t)(address & 0xFFu));           /* A7..A0  */
 
     /* Send data byte */
     spi_transfer(value);
@@ -166,30 +172,29 @@ uint8_t eeprom_read_byte(uint16_t address)
 
     /* TODO 4.7  Select, send the read instruction and the address, clock one
      *           more byte to receive the data, deselect, and return it.
-     * Transaction (datasheet Figure 9 - READ timing):
+     * Transaction (CAT25010 Figure 9 - READ timing, p.9, with the address
+     * phase of the fitted part, README §5.2):
      *   1. Assert CS LOW
-     *   2. Send READ opcode (0x03)
-     *      For CAT25040: bit 3 of opcode = A8 (9th address bit)
-     *   3. Send 8-bit address (A7..A0)
+     *   2. Send READ opcode (0x03) on its own
+     *   3. Send address high byte (A15..A8), then low byte (A7..A0)
+     *      - EEPROM_ADDR_BYTES = 2, MSB first (board_config.h / README §5.2)
      *   4. Clock one dummy byte to receive the data byte
      *   5. Deassert CS HIGH
      *
-     * After the last address bit, EEPROM immediately shifts data out on SO. 
+     * After the last address bit, EEPROM immediately shifts data out on SO.
+     * With only one address byte the dummy byte would be taken as the
+     * address low byte, so the EEPROM never drives SO before CS rises.
      */
     uint8_t data;
 
-    if (address >= EEPROM_SIZE_BYTES)
-    {
-       return 0u;
-    }
-
     eeprom_cs_low();
 
-    /* Opcode with A8 for CAT25040 */
-    spi_transfer(EEPROM_CMD_READ | (uint8_t)((address >> 5u) & 0x08u));
+    /* Opcode on its own - no address bits packed into it on this part */
+    spi_transfer(EEPROM_CMD_READ);
 
-    /* Send 8-bit address */
-    spi_transfer((uint8_t)(address & 0xFFu));
+    /* Address, 2 bytes, MSB first (README §5.2) */
+    spi_transfer((uint8_t)((address >> 8) & 0xFFu));    /* A15..A8 */
+    spi_transfer((uint8_t)(address & 0xFFu));           /* A7..A0  */
 
     /* Clock in data byte (send dummy 0x00 to generate SCK pulses) */
     data = spi_transfer(0x00u);
