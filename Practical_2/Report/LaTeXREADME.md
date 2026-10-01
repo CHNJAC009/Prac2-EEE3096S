@@ -98,4 +98,4 @@ Strawberry Perl from <https://strawberryperl.com>.
 
 1. Make sure a search for `fillin` and `writeup` finds nothing.
 2. Check the length: **at most 8 pages, not counting the title page and references.**
-3. Copy `build/main.pdf` to **`prac_02_CHNJAC009_SBYSIB014.pdf`** and upload that to Gradescope.
+3. Copy `build/main.pdf` to **`prac_02_SBYSIB014_CHNJAC009.pdf`** and upload that to Gradescope.

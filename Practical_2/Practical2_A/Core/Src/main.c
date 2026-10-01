@@ -3,8 +3,8 @@
   * EEE3096S 2026 - Practical 2A
   * Memory-Mapped I/O and Hardware SPI - building an EEPROM driver
   *
-  * Student 1 : <name>  <student number>
-  * Student 2 : <name>  <student number>
+  * Student 1 : Sibongokuhle Sibiya  SBYSIB014
+  * Student 2 : Jacob Cohen  CHNJAC009
   * Date      : <date>
   *
   * Board : UCT Development Board, STM32F051C8
