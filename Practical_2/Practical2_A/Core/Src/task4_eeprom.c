@@ -107,9 +107,7 @@ void eeprom_write_byte(uint16_t address, uint8_t value)
      *
      * ADDRESS FORMAT: the handout's CAT25040 uses ONE address byte and puts
      * A8 in bit 3 of the opcode. The part fitted to this board does NOT: it
-     * takes TWO address bytes, MSB first (README §5.2). With only one address
-     * byte the data byte is taken as the address low byte, CS rises before
-     * any data arrives, the write is thrown away and WEL stays set.
+     * takes TWO address bytes, MSB first (README §5.2).
      *
      * FROM DATASHEET (CAT25010 "Byte Write", p.7):
      * "Internal programming will start after the LOW to HIGH CS transition."
@@ -121,7 +119,7 @@ void eeprom_write_byte(uint16_t address, uint8_t value)
     /* Step 2: Send WRITE command with address and data */
     eeprom_cs_low();
 
-    /* Opcode on its own - no address bits packed into it on this part */
+    /* Opcode on its own (README §5.2) */
     spi_transfer(EEPROM_CMD_WRITE);
 
     /* Address, 2 bytes, MSB first (README §5.2) */
@@ -182,14 +180,12 @@ uint8_t eeprom_read_byte(uint16_t address)
      *   5. Deassert CS HIGH
      *
      * After the last address bit, EEPROM immediately shifts data out on SO.
-     * With only one address byte the dummy byte would be taken as the
-     * address low byte, so the EEPROM never drives SO before CS rises.
      */
     uint8_t data;
 
     eeprom_cs_low();
 
-    /* Opcode on its own - no address bits packed into it on this part */
+    /* Opcode on its own (README §5.2) */
     spi_transfer(EEPROM_CMD_READ);
 
     /* Address, 2 bytes, MSB first (README §5.2) */

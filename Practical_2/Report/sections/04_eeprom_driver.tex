@@ -5,9 +5,6 @@
 % completion, the write/read result, a CS/SCK oscilloscope capture.
 % README s5.2 also asks to write down how the 2-byte address format was
 % confirmed on the bench.
-%
-% Still to do after the bench test (all red):
-%   - figures/task4_cs_sck.png and its clock count
 % ============================================================================
 \section{EEPROM Driver}
 \label{sec:eeprom}
@@ -58,5 +55,5 @@ Status before the write: 0x00; after: 0x00.
 $B = \text{\BHex}$ was written to $A = \text{\AHex}$, the write completed after
 \SI{3}{\milli\second}, and the byte read back as 0x44; verification passed.
 
-\scopefig{task4_cs_sck.png}{READ transaction: CH1 = CS, CH2 = SCK;
-  \fillin{n} clock pulses while CS is low.}{fig:task4}
+\scopefig{task4_cs_sck.jpeg}{Start of the PA0 write: CH1 = CS, CH2 = SCK.
+  RDSR (16), WREN (8) and WRITE (32) clock pulses while CS is low.}{fig:task4}

@@ -110,8 +110,7 @@ uint8_t spi_transfer(uint8_t tx)
     }
 
     /* Read DR as an 8-bit access, same reason as the write in TODO 3.5.
-     * A 16-bit read (e.g. (uint8_t)EE_SPI->DR - the cast only happens AFTER
-     * the 16-bit bus read) triggers data packing: "data packing is used
+     * A 16-bit read triggers data packing: "data packing is used
      * automatically when any read or write 16-bit access is performed on the
      * SPIx_DR register" - it tries to pop TWO bytes from the RX FIFO.
      * RM0091 §28.5.9 "Data packing", p.768; §28.9.4 SPIx_DR, p.807 */

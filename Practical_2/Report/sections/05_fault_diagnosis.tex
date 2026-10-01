@@ -4,20 +4,30 @@
 % faulty waveform, corrected waveform, register field responsible, short
 % explanation of the correction. Both captures should be the SAME measurement
 % (RUN_TASK 5 vs RUN_TASK 4).
+%
+% Still to do (all red):
+%   - register / field / faulty value / corrected value (from dbg_spi_cr1 and
+%     dbg_spi_cr2 in RUN_TASK 4 vs 5)
+%   - figures/task5_faulty.jpeg and figures/task5_corrected.jpeg
 % ============================================================================
 \section{Fault Diagnosis}
 \label{sec:fault}
 
 \begin{table}[htbp]
   \centering
-  \caption{Fault diagnosis.}
+  \caption{Fault diagnosis (\reg{RUN\_TASK}~5 against \reg{RUN\_TASK}~4).}
   \label{tab:fault}
   \small
   \begin{tabularx}{\linewidth}{@{}XXXX@{}}
     \toprule
     \textbf{Expected} & \textbf{Observed} & \textbf{Cause} & \textbf{Correction} \\
     \midrule
-    \fillin{expected} & \fillin{observed} & \fillin{register, field, value} & \fillin{corrected value} \\
+    Mode~(0,0): MOSI changes on falling SCK edges and is stable at each rising
+    edge; status 0x00, read 0x44, write done in \SI{3}{\milli\second}
+    & MOSI changes at the rising SCK edges; status and read-back 0xFF; write
+    poll times out after \SI{50}{\milli\second}
+    & \fillin{register, field = faulty value}
+    & \fillin{field = corrected value} (\reg{RUN\_TASK}~4) \\
     \bottomrule
   \end{tabularx}
 \end{table}
@@ -26,19 +36,26 @@
   \centering
   \begin{subfigure}[t]{0.48\linewidth}
     \centering
-    \subscope{task5_faulty.png}{Faulty (\reg{RUN\_TASK}~$=5$).}{fig:fault-bad}
+    \subscope{task5_faulty.jpeg}{Faulty (\reg{RUN\_TASK}~$=5$).}{fig:fault-bad}
   \end{subfigure}\hfill
   \begin{subfigure}[t]{0.48\linewidth}
     \centering
-    \subscope{task5_corrected.png}{Corrected (\reg{RUN\_TASK}~$=4$).}{fig:fault-good}
+    \subscope{task5_corrected.jpeg}{Corrected (\reg{RUN\_TASK}~$=4$).}{fig:fault-good}
   \end{subfigure}
-  \caption{The same measurement, faulty and corrected: CH1 = \fillin{signal},
-    CH2 = \fillin{signal}.}
+  \caption{The same read-only transaction, faulty and corrected:
+    CH1 = SCK, CH2 = MOSI.}
   \label{fig:fault}
 \end{figure}
 
 \paragraph{Register field responsible.}
-\fillin{register, field, faulty value $\rightarrow$ corrected value}
+\fillin{SPI2\_CRx, field, faulty value $\rightarrow$ corrected value}~\cite[\S28.9.1, \S28.5.6]{rm0091}.
 
 \paragraph{Correction.}
-\writeup{Short explanation of the correction and why it fixes the transaction.}
+The EEPROM latches SI on the rising edge of SCK and needs the data stable
+around that edge~\cite[p.~5, Tab.~7]{eeprom}. With the fault, MOSI changed at
+the rising edge, so the EEPROM latched incorrect opcode bits, ignored every
+command and left SO tri-stated; the MISO pull-up then returned 0xFF, and RDY
+appeared permanently set. Restoring \fillin{field} to \fillin{value} returns
+the interface to mode~(0,0), so MOSI is stable at every rising edge
+(\cref{fig:fault-good}): the EEPROM decodes the commands, the status reads
+0x00 and 0x44 is read back from $A$.
