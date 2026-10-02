@@ -81,7 +81,8 @@ volatile uint32_t ee_step_ms    = 0u;
 volatile uint32_t ee_poll_count = 0u;
 
 /* Number of main-loop passes during the last transaction (PA0 to result).
- * Thousands of passes for a ~4 ms transaction = the loop never stopped. */
+ * Many passes (far more than ee_poll_count) during a ~4 ms transaction = the
+ * loop never stopped. */
 volatile uint32_t ee_busy_passes = 0u;
 
 static uint16_t     ee_addr;          /* address/byte latched when PA0 starts, */

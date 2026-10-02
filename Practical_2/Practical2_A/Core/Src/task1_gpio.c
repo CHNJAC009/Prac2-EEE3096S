@@ -86,11 +86,11 @@ void task1_gpio_init(void)
      *           per pin: clear both of PC13's bits, then set the output value,
      *           leaving every other pin unchanged. */
 
-    *pGPIO_MODER &= ~(3 << 26); //Base of PC13 is 26, use &= to clear bits
-    *pGPIO_MODER |= (1UL << 26); // set the output bit for PC13
+    *pGPIO_MODER &= ~(3 << 22); //Base of PC13 is 26, use &= to clear bits
+    *pGPIO_MODER |= (1UL << 22); // set the output bit for PC13
 
     /* TODO 1.7  Drive PC13 to a known starting level. */
-    *pGPIO_BSRR = (1UL << 13); // set PC13 high
+    *pGPIO_BSRR = (1UL << 11); // set PC13 high
 }
 
 void task1_gpio_update(uint32_t now)

@@ -5,10 +5,7 @@
 % explanation of the correction. Both captures should be the SAME measurement
 % (RUN_TASK 5 vs RUN_TASK 4).
 %
-% Still to do (all red):
-%   - register / field / faulty value / corrected value (from dbg_spi_cr1 and
-%     dbg_spi_cr2 in RUN_TASK 4 vs 5)
-%   - figures/task5_faulty.jpeg and figures/task5_corrected.jpeg
+% Still to do: figures/task5_faulty.jpeg and figures/task5_corrected.jpeg
 % ============================================================================
 \section{Fault Diagnosis}
 \label{sec:fault}
@@ -26,8 +23,8 @@
     edge; status 0x00, read 0x44, write done in \SI{3}{\milli\second}
     & MOSI changes at the rising SCK edges; status and read-back 0xFF; write
     poll times out after \SI{50}{\milli\second}
-    & \fillin{register, field = faulty value}
-    & \fillin{field = corrected value} (\reg{RUN\_TASK}~4) \\
+    & \reg{SPI2\_CR1} = 0x0365: CPHA (bit 0) = 1, i.e.\ mode~(0,1); MOSI changes on rising edges
+    & CPHA = 0, \reg{SPI2\_CR1} = 0x0364: mode~(0,0) (\reg{RUN\_TASK}~4) \\
     \bottomrule
   \end{tabularx}
 \end{table}
@@ -48,14 +45,15 @@
 \end{figure}
 
 \paragraph{Register field responsible.}
-\fillin{SPI2\_CRx, field, faulty value $\rightarrow$ corrected value}~\cite[\S28.9.1, \S28.5.6]{rm0091}.
+\reg{SPI2\_CR1} bit~0, CPHA: 1 $\rightarrow$ 0 (CR1 0x0365 $\rightarrow$ 0x0364; CR2 = 0x1700 in both builds; CPOL = 0 in both, so SCK idles low in both)~\cite[\S28.9.1, \S28.5.6]{rm0091}.
 
 \paragraph{Correction.}
 The EEPROM latches SI on the rising edge of SCK and needs the data stable
-around that edge~\cite[p.~5, Tab.~7]{eeprom}. With the fault, MOSI changed at
-the rising edge, so the EEPROM latched incorrect opcode bits, ignored every
+around that edge~\cite[p.~5, Tab.~7]{eeprom}. With CPHA~=~1 the STM32 samples
+on the second (falling) edge and therefore shifts MOSI on the first (rising)
+edge~\cite[\S28.5.6]{rm0091}, so the EEPROM latched incorrect opcode bits, ignored every
 command and left SO tri-stated; the MISO pull-up then returned 0xFF, and RDY
-appeared permanently set. Restoring \fillin{field} to \fillin{value} returns
+appeared permanently set. Restoring CPHA to 0 returns
 the interface to mode~(0,0), so MOSI is stable at every rising edge
 (\cref{fig:fault-good}): the EEPROM decodes the commands, the status reads
 0x00 and 0x44 is read back from $A$.

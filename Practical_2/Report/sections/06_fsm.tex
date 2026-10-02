@@ -6,8 +6,6 @@
 % The diagram must show (Task 6 "State-machine record"): initial state,
 % conditions causing transitions, success path, failure path, abort path.
 % State numbers match ee_state_t in task6_fsm.c.
-%
-% Still to do (red): the example result from a RUN_TASK 6 run.
 % ============================================================================
 \section{Non-Blocking FSM}
 \label{sec:fsm}
@@ -16,40 +14,57 @@
   \centering
   \resizebox{\linewidth}{!}{%
   \begin{tikzpicture}[
-      >={Stealth[length=2mm]}, node distance=1.1cm and 1.7cm,
-      st/.style={draw, rounded corners, minimum height=9mm, minimum width=15mm,
+      >={Stealth[length=2mm]},
+      st/.style={draw, rounded corners, minimum height=10mm, minimum width=17mm,
                  align=center, font=\footnotesize},
-      lbl/.style={font=\scriptsize, align=center}]
-    \node[st, initial, initial text={reset}] (idle) {IDLE\\(0)};
-    \node[st, right=of idle]  (prep)   {WRITE\\PREP (1)};
-    \node[st, right=of prep]  (write)  {WRITE\\(2)};
-    \node[st, right=of write] (busy)   {WAIT\\BUSY (3)};
-    \node[st, right=of busy]  (read)   {READ\\(4)};
-    \node[st, right=of read]  (verify) {VERIFY\\(5)};
-    \node[st, below=2.2cm of verify, fill=green!12] (ok)   {SUCCESS\\(6)};
-    \node[st, above=2.3cm of write, xshift=16mm, fill=red!12] (fail) {FAIL\\(7)};
+      lbl/.style={font=\scriptsize, align=center},
+      jn/.style={circle, fill, inner sep=0.9pt}]
+    % ---- states on a grid (3.5 cm between centres) -------------------------
+    \node[st, initial, initial text={reset}] (idle) at (0,0)    {IDLE\\(0)};
+    \node[st]                     (prep)   at (3.5,0)  {WRITE\\PREP (1)};
+    \node[st]                     (write)  at (7.0,0)  {WRITE\\(2)};
+    \node[st]                     (busy)   at (10.5,0)  {WAIT\\BUSY (3)};
+    \node[st]                     (read)   at (14.0,0) {READ\\(4)};
+    \node[st]                     (verify) at (17.5,0) {VERIFY\\(5)};
+    \node[st, fill=green!12]      (ok)     at (21.0,0) {SUCCESS\\(6)};
+    \node[st, fill=red!12]        (fail)   at (21.0,2.8) {FAIL\\(7)};
 
-    \draw[->] (idle)  -- node[lbl, above] {PA0} (prep);
-    \draw[->] (prep)  -- node[lbl, above] {RDY=0\\WREN} (write);
-    \draw[->] (write) -- node[lbl, above] {WEL=1\\WRITE} (busy);
-    \draw[->] (busy)  -- node[lbl, above] {RDY=0} (read);
-    \draw[->] (read)  -- node[lbl, above] {byte\\read} (verify);
-    \draw[->] (verify) -- node[lbl, right] {match} (ok);
-    \draw[->] (busy) to[loop below, looseness=5]
-      node[lbl, below] (looplbl) {RDY=1: RDSR\\every 1\,ms} (busy);
+    % ---- main (success) path ------------------------------------------------
+    \draw[->] (idle)   -- node[lbl, above] {PA0} (prep);
+    \draw[->] (prep)   -- node[lbl, above] {RDY=0\\WREN} (write);
+    \draw[->] (write)  -- node[lbl, above] {WEL=1\\WRITE} (busy);
+    \draw[->] (busy)   -- node[lbl, above] {RDY=0} (read);
+    \draw[->] (read)   -- node[lbl, above] {byte\\read} (verify);
+    \draw[->] (verify) -- node[lbl, above, pos=0.7] {match} (ok);
 
-    \draw[->] (prep.north)   to[bend left=15] node[lbl, left]  {bad $A$ or\\busy timeout} (fail.west);
-    \draw[->] (write.north)  -- node[lbl, left] {WEL=0} (fail.south west);
-    \draw[->] (busy.north)   -- node[lbl, right] {timeout\\50\,ms} (fail.south east);
-    \draw[->] (verify.north) to[bend right=15] node[lbl, right] {mismatch} (fail.east);
+    % ---- WAIT_BUSY self-loop (square) ---------------------------------------
+    \draw[->] ([xshift=-4mm]busy.south) -- ++(0,-6mm) -| ([xshift=4mm]busy.south);
+    \node[lbl, below=6.5mm of busy.south] (looplbl) {RDY=1: RDSR\\every 1\,ms};
 
-    \draw[->] (ok.west) -| node[lbl, below, pos=0.25] {PA0 (new write)} (prep.south);
-    \draw[->] (fail.north west) to[bend right=35] node[lbl, above left] {PA0} (prep.north west);
+    % ---- failure paths: up to a common line into FAIL -----------------------
+    \draw[->] (prep.north |- fail.west) -- (fail.west);
+    \draw (prep.north)   -- node[lbl, right, pos=0.55] {bad $A$ or\\busy timeout} (prep.north |- fail.west);
+    \draw (write.north)  -- node[lbl, right, pos=0.55] {WEL=0} (write.north |- fail.west);
+    \draw (busy.north)   -- node[lbl, right, pos=0.55] {timeout\\50\,ms} (busy.north |- fail.west);
+    \draw (verify.north) -- node[lbl, right, pos=0.55] {mismatch} (verify.north |- fail.west);
+    \node[jn] at (write.north |- fail.west) {};
+    \node[jn] at (busy.north |- fail.west) {};
+    \node[jn] at (verify.north |- fail.west) {};
 
+    % ---- PA0 restart from SUCCESS / FAIL: along the bottom into WRITE_PREP --
+    \coordinate (rail) at (0,-3.4);
+    \draw (fail.east) -- ++(6mm,0) coordinate (fe) -- (fe |- rail);
+    \draw (ok.south) -- (ok.south |- rail);
+    \node[jn] at (ok.south |- rail) {};
+    \draw[->] (fe |- rail) -- node[lbl, below, pos=0.5] {PA0 (new write)} (prep.south |- rail) -- (prep.south);
+
+    % ---- abort: dashed box of busy states -> IDLE ---------------------------
     \begin{scope}[on background layer]
-      \node[draw, dashed, rounded corners, inner sep=2.5mm, inner ysep=3mm, fit=(prep)(verify)(looplbl)] (box) {};
+      \node[draw, dashed, rounded corners, inner xsep=4mm, inner ysep=8mm,
+            fit=(prep)(verify)(looplbl)] (box) {};
     \end{scope}
-    \draw[->, dashed] ([xshift=8mm]box.south west) -- ++(0,-5mm) -| node[lbl, below, pos=0.25] {PA3 (abort)} (idle.south);
+    \draw[->, dashed] ([xshift=3mm]box.south west) -- ++(0,-6mm) coordinate (ab)
+      -- node[lbl, below] {PA3 (abort)} (idle.south |- ab) -- (idle.south);
   \end{tikzpicture}}
   \caption{EEPROM transaction state machine (\reg{ee\_state} values in
     brackets). Dashed box: busy states, all aborted by PA3.}
@@ -76,5 +91,5 @@ and the bus idle.
 
 \paragraph{Example result.}
 $B = \text{\BHex}$ written to $A = \text{\AHex}$: the write finished after
-\fillin{n} status checks while the main loop ran \fillin{N} times; read back
-as \fillin{0x..}; verification \fillin{passed}.
+4 status checks (\SI{4}{\milli\second}) while the main loop ran 112 times; read
+back as 0x44; verification passed.

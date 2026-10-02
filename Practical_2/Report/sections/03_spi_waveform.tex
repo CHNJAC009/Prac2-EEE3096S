@@ -3,11 +3,6 @@
 % Handout s10.2 requires ONLY: calculation of B, SCK/MOSI capture, measured
 % SCK frequency, percentage frequency error, manual decoding of the byte.
 % The waveform is the evidence - decode it from the capture, not the code.
-%
-% Still to do after the scope capture (all red):
-%   - figures/task3_sck_mosi.png
-%   - \TSCKMeas, \fSCKMeas, \fSCKErr in values.tex
-%   - the "MOSI" row of the decoding table and the decoded value
 % ============================================================================
 \section{SPI Waveform}
 \label{sec:spi-waveform}
@@ -46,9 +41,9 @@ MOSI was read at each rising SCK edge (CPOL = 0, CPHA = 0), MSB first
     \toprule
     \textbf{Bit}  & b7 & b6 & b5 & b4 & b3 & b2 & b1 & b0 \\
     \midrule
-    \textbf{MOSI} & \fillin{0} & \fillin{1} & \fillin{0} & \fillin{0} & \fillin{0} & \fillin{1} & \fillin{0} & \fillin{0} \\
+    \textbf{MOSI} & 0 & 1 & 0 & 0 & 0 & 1 & 0 & 0 \\
     \bottomrule
   \end{tabular}
 \end{table}
 
-The decoded value is \fillin{0x44}.
+The decoded value is 0x44.

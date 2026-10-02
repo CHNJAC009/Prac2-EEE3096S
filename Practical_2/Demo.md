@@ -403,6 +403,19 @@ Every transaction is: CS low → bytes → CS high.
 On **reset** the board runs `eeprom_read_only_path()`: it **reads only**,
 never writes. That's what makes the persistence test meaningful.
 
+#### Why each command is that many bytes (8 clocks per byte)
+Every byte is 8 bits (DS = 0111). Commands differ only in **how many bytes** they need:
+
+| Command | Bytes | Clocks | Why |
+|---|---|---|---|
+| WREN | opcode | 8 | An instruction with no reply, so one byte is enough (CAT25010 Fig. 3, p.6) |
+| RDSR | opcode + dummy | 16 | It needs an answer, but the EEPROM can only send while **we** clock it. The dummy byte makes the 8 clocks the status comes back on (Fig. 10, p.9). |
+| WRITE | opcode + A[15:8] + A[7:0] + data | 32 | What to do, where (2-byte address, README §5.2), and the byte to store. All 4 bytes go **to** the EEPROM. |
+| READ | opcode + A[15:8] + A[7:0] + dummy | 32 | What to do and where, then a dummy byte whose 8 clocks carry the stored byte **back** (Fig. 9, p.9) |
+
+Rule of thumb: **every byte we want back costs one dummy byte**, because in SPI
+only the master drives the clock.
+
 ### Our results (RUN_TASK 4, PA0)
 - Status before **0x00**, after **0x00** (WEL cleared automatically after the write, p.7)
 - Write completed after **3 ms** (≤ 5 ms tWC)
@@ -500,42 +513,38 @@ is our "corrected" build.
    receives isn't 0x05 or 0x03, so it ignores the transaction.
    **That's the "electrical reason".**
 
-### What is still to do (you must find the field yourselves)
-1. **Find the register.** In both modes, read `dbg_spi_cr1` and `dbg_spi_cr2`
-   (or the SFRs view → SPI2). Write both values in binary and find the bit(s)
-   that differ. Use the CR1/CR2 field tables in the Task 2 section to name the field.
-2. **Check it explains the scope.** The field you find must be one that
-   controls **which SCK edge the data is sampled or changed on**.
-   - Read RM0091 §28.5.6 "Communication formats" (p.763) and its figure.
-   - Also compare the **SCK idle level** before the first pulse in both modes.
-3. **Captures for the report.** Use the **same** setup in both modes:
-   - CH1 = SCK, CH2 = MOSI
-   - same timebase and trigger
-   - `eeprom_read_loop_enable = 1`
+### What we found (the diagnosis)
 
-   Save them as `Report/figures/task5_faulty.png` and `task5_corrected.png`.
-4. **Optional, stronger:** CH2 on **MISO**. In mode 4 MISO toggles during the
-   reply byte; in mode 5 it stays flat high, which proves the EEPROM is silent.
-5. **Don't press PA0 in mode 5.** You don't need to write to diagnose, and a
-   misread command could change the EEPROM. Use the read loop only.
-6. **Afterwards, check the EEPROM is still fine:** `RUN_TASK 4`, power-cycle,
-   no PA0. Expect status 0x00 and read 0x44.
+| | `dbg_spi_cr1` | Binary, bits 2:0 (MSTR CPOL CPHA) | `dbg_spi_cr2` |
+|---|---|---|---|
+| RUN_TASK 4 (correct) | 868 = **0x0364** | 1 0 **0** | 5888 = 0x1700 |
+| RUN_TASK 5 (faulty) | 869 = **0x0365** | 1 0 **1** | 5888 = 0x1700 |
 
-Fill this in once confirmed (it's also the report table):
+- **Only bit 0 of SPI2_CR1 differs.** That bit is **CPHA** (clock phase; RM0091 §28.9.1, p.801–802). CR2 is identical.
+- **The fault sets CPHA from 0 to 1, giving mode (0,1).** CPOL is still 0, which is why SCK still idles **low** in both captures.
+- **Why that breaks the EEPROM:** with CPHA = 1 the STM32 samples on the *second* (falling) edge, so it changes MOSI on the *first* (rising) edge (RM0091 §28.5.6, p.763). That is exactly what the scope showed. The EEPROM latches SI on the rising edge (CAT25010 p.5), so it reads bits while they're changing, gets a wrong opcode and never answers.
+- **Watch out:** it's easy to say "CPOL". 0x0365 − 0x0364 = 1 = **bit 0 = CPHA**. CPOL would be bit 1, which would give 0x0366, and SCK would then idle **high**.
+
+**Captures for the report:**
+- Use the same setup in both modes: CH1 = SCK, CH2 = MOSI, trigger on the SCK rising edge, `eeprom_read_loop_enable = 1`.
+- Save them as `Report/figures/task5_faulty.jpeg` and `task5_corrected.jpeg`.
+- **Don't press PA0 in mode 5.**
+- Afterwards, run `RUN_TASK 4`, power-cycle without pressing PA0, and check you get status 0x00 and read 0x44.
 
 | Expected | Observed | Cause | Correction |
 |---|---|---|---|
-| Mode 0: MOSI stable at the rising SCK edges; status 0x00, read 0x44, write ≈ 3 ms | MOSI changes at the rising edges; status and read 0xFF; write poll times out (50 ms) | Register `SPI2_CR1`/`CR2`?, field `____`, value `__` | Field = `__` (RUN_TASK 4) → MOSI stable at the rising edges, EEPROM answers |
+| Mode (0,0): MOSI stable at the rising SCK edges; status 0x00, read 0x44, write ≈ 3 ms | MOSI changes at the rising edges; status and read 0xFF; write poll times out (50 ms) | `SPI2_CR1` = 0x0365: **CPHA (bit 0) = 1**, mode (0,1) | **CPHA = 0**, CR1 = 0x0364, mode (0,0) (RUN_TASK 4). MOSI is stable at the rising edges and the EEPROM answers. |
 
 ### What they will ask (handout Task 5 checkpoint)
 
 | They ask | You answer with |
 |---|---|
 | **The symptom** | "Status and read both 0xFF, the write times out, verify fails. On the scope, MOSI changes at the rising SCK edges." |
-| **The register responsible** | The register whose value differs between modes 4 and 5 |
-| **The incorrect field value** | Its value in mode 5 |
-| **The corrected field value** | Its value in mode 4, and why that matches the EEPROM (CAT25010 p.5: modes (0,0)/(1,1), SI latched on the rising edge) |
-| **The electrical reason** | "The EEPROM samples MOSI on the rising edge. With the fault, the STM32 changes MOSI at that same edge, so the data isn't stable when it's latched (tSU/tH, Table 7). The EEPROM receives a wrong opcode, ignores the command and never drives MISO, so we read 0xFF." |
+| **The register responsible** | "SPI2_CR1. It's 0x0365 in the faulty build and 0x0364 in the good one. CR2 is the same in both." |
+| **The incorrect field value** | "CPHA, bit 0, = 1. That's mode (0,1)." |
+| **The corrected field value** | "CPHA = 0, which is mode (0,0). The EEPROM only supports modes (0,0) and (1,1) (CAT25010 p.5)." |
+| **The electrical reason** | "With CPHA = 1 the STM32 changes MOSI on the rising edge, but the EEPROM samples SI on the rising edge. So the data isn't stable when it's latched (tSU/tH, CAT25010 Table 7). The EEPROM receives a wrong opcode, ignores the command and never drives MISO, so the pull-up gives 0xFF." |
+| **How do you know it's CPHA and not CPOL?** | "The register value differs in bit 0, and SCK still idles low in both captures. A CPOL change would make SCK idle high." |
 | **Predict a config change** | Use the "predict what changing X does" table in Task 2 |
 
 ---
@@ -566,7 +575,7 @@ while (1) {
 The state machine does **one small step and returns immediately**. A variable
 (`ee_state`) remembers where we are, so the next pass carries on from there.
 If the EEPROM is still busy, the step is just "is it time to check again? No →
-return." So the loop spins thousands of times while the EEPROM writes.
+return." So the loop keeps spinning (hundreds of passes) while the EEPROM writes.
 
 ### Our states (`Core/Src/task6_fsm.c`, `ee_state_t`)
 
@@ -605,7 +614,7 @@ return." So the loop spins thousands of times while the EEPROM writes.
 | `ee_state` | The current state number (table above) |
 | `ee_step_ms` (writable) | **Slow-motion mode.** Normally 0. A full transaction takes ~4 ms, which is far too fast to see `ee_state` change or to press PA3 in time. Set it to **1000**: every busy state then waits ≥ 1 s before doing its step, so you can watch 1 → 2 → 3 → 4 → 5 → 6 and have time to abort. It doesn't block: the FSM just keeps returning until the time has passed. |
 | `ee_poll_count` | How many status checks WAIT_BUSY made (about 3–5 at full speed) |
-| `ee_busy_passes` | **How many times the main loop ran during the transaction.** Thousands = the loop never stopped = non-blocking. |
+| `ee_busy_passes` | **How many times the main loop ran during the transaction.** Many passes (hundreds) = the loop never stopped = non-blocking. |
 | `ee_use_fsm` (writable) | 1 = our FSM; 0 = the Task 4 blocking path on PA0, for comparison |
 | `ee_last_read` | Last byte read (the LEDs show it) |
 
@@ -613,7 +622,7 @@ return." So the loop spins thousands of times while the EEPROM writes.
 1. Set `RUN_TASK 6`, build, debug, Resume, and check that `run_task` = 6.
 2. **Normal run:** `ee_step_ms` = 0, press PA0.
    - `ee_state` ends at **6**, green LED on, LEDs = 0x44.
-   - `ee_poll_count` ≈ 3–5, `ee_busy_passes` in the thousands.
+   - `ee_poll_count` ≈ 3–5, `ee_busy_passes` in the hundreds (well above `ee_poll_count`).
 3. **Watch the states:** `ee_step_ms` = 1000, press PA0. `ee_state` steps 1 → 2 → 3 → 4 → 5 → 6, about once a second.
 4. **Abort:** `ee_step_ms` = 1000, press PA0, then **PA3** while `ee_state` is 1–5.
    - `ee_state` → **0**, both status LEDs off.
@@ -628,7 +637,7 @@ return." So the loop spins thousands of times while the EEPROM writes.
 | Successful verification | `ee_state` = 6, green LED, `eeprom_verify_ok` = 1 |
 | Byte on the LEDs | 0x44 = `0100 0100` (PB6, PB2 on) |
 | Abort with PA3 | Step 4 |
-| **Why is it non-blocking?** | "No call ever waits for the EEPROM. Each call does at most one short SPI frame and returns. While the EEPROM writes, WAIT_BUSY only compares `HAL_GetTick()` with the last check time and returns if a check isn't due. So the main loop keeps running `read_inputs()` and PA3 is seen on the very next pass. `ee_busy_passes` proves it: thousands of loop passes during one 4 ms transaction. In the Task 4 version (`ee_use_fsm = 0`), the loop is stuck inside `eeprom_write_byte()` for the whole write." |
+| **Why is it non-blocking?** | "No call ever waits for the EEPROM. Each call does at most one short SPI frame and returns. While the EEPROM writes, WAIT_BUSY only compares `HAL_GetTick()` with the last check time and returns if a check isn't due. So the main loop keeps running `read_inputs()` and PA3 is seen on the very next pass. `ee_busy_passes` proves it: hundreds of loop passes during one ~4 ms transaction, while only a handful were status checks. In the Task 4 version (`ee_use_fsm = 0`), the loop is stuck inside `eeprom_write_byte()` for the whole write." |
 
 ### Curveball: "change the address or byte, rebuild, repeat"
 - **Without rebuilding:** edit `eeprom_test_addr` / `eeprom_test_byte` in Live Expressions, then press PA0.
