@@ -5,22 +5,76 @@
 % write/read/verify result.
 % The diagram must show (Task 6 "State-machine record"): initial state,
 % conditions causing transitions, success path, failure path, abort path.
+% State numbers match ee_state_t in task6_fsm.c.
 %
-% Diagram: export it (draw.io etc.) to figures/task6_fsm.png, or replace the
-% \scopefig line with a figure containing a tikzpicture (automata library is
-% already loaded in main.tex).
+% Still to do (red): the example result from a RUN_TASK 6 run.
 % ============================================================================
 \section{Non-Blocking FSM}
 \label{sec:fsm}
 
-\scopefig[0.9\linewidth]{task6_fsm.png}{EEPROM transaction state machine.}{fig:fsm}
+\begin{figure}[htbp]
+  \centering
+  \resizebox{\linewidth}{!}{%
+  \begin{tikzpicture}[
+      >={Stealth[length=2mm]}, node distance=1.1cm and 1.7cm,
+      st/.style={draw, rounded corners, minimum height=9mm, minimum width=15mm,
+                 align=center, font=\footnotesize},
+      lbl/.style={font=\scriptsize, align=center}]
+    \node[st, initial, initial text={reset}] (idle) {IDLE\\(0)};
+    \node[st, right=of idle]  (prep)   {WRITE\\PREP (1)};
+    \node[st, right=of prep]  (write)  {WRITE\\(2)};
+    \node[st, right=of write] (busy)   {WAIT\\BUSY (3)};
+    \node[st, right=of busy]  (read)   {READ\\(4)};
+    \node[st, right=of read]  (verify) {VERIFY\\(5)};
+    \node[st, below=2.2cm of verify, fill=green!12] (ok)   {SUCCESS\\(6)};
+    \node[st, above=2.3cm of write, xshift=16mm, fill=red!12] (fail) {FAIL\\(7)};
+
+    \draw[->] (idle)  -- node[lbl, above] {PA0} (prep);
+    \draw[->] (prep)  -- node[lbl, above] {RDY=0\\WREN} (write);
+    \draw[->] (write) -- node[lbl, above] {WEL=1\\WRITE} (busy);
+    \draw[->] (busy)  -- node[lbl, above] {RDY=0} (read);
+    \draw[->] (read)  -- node[lbl, above] {byte\\read} (verify);
+    \draw[->] (verify) -- node[lbl, right] {match} (ok);
+    \draw[->] (busy) to[loop below, looseness=5]
+      node[lbl, below] (looplbl) {RDY=1: RDSR\\every 1\,ms} (busy);
+
+    \draw[->] (prep.north)   to[bend left=15] node[lbl, left]  {bad $A$ or\\busy timeout} (fail.west);
+    \draw[->] (write.north)  -- node[lbl, left] {WEL=0} (fail.south west);
+    \draw[->] (busy.north)   -- node[lbl, right] {timeout\\50\,ms} (fail.south east);
+    \draw[->] (verify.north) to[bend right=15] node[lbl, right] {mismatch} (fail.east);
+
+    \draw[->] (ok.west) -| node[lbl, below, pos=0.25] {PA0 (new write)} (prep.south);
+    \draw[->] (fail.north west) to[bend right=35] node[lbl, above left] {PA0} (prep.north west);
+
+    \begin{scope}[on background layer]
+      \node[draw, dashed, rounded corners, inner sep=2.5mm, inner ysep=3mm, fit=(prep)(verify)(looplbl)] (box) {};
+    \end{scope}
+    \draw[->, dashed] ([xshift=8mm]box.south west) -- ++(0,-5mm) -| node[lbl, below, pos=0.25] {PA3 (abort)} (idle.south);
+  \end{tikzpicture}}
+  \caption{EEPROM transaction state machine (\reg{ee\_state} values in
+    brackets). Dashed box: busy states, all aborted by PA3.}
+  \label{fig:fsm}
+\end{figure}
 
 \paragraph{Transition logic.}
-\writeup{Short description of the transitions in \cref{fig:fsm}.}
+PA0 starts a transaction from IDLE, SUCCESS or FAIL; a press while busy is
+ignored. WRITE\_PREP waits for RDY~=~0 and sends WREN; WRITE checks WEL~=~1 and
+sends WRITE, two address bytes and $B$; WAIT\_BUSY reads the status once per
+\SI{1}{\milli\second} until RDY~=~0~\cite[p.~5, Tab.~10]{eeprom}; READ reads
+$A$ back and VERIFY compares it with $B$. A busy timeout, WEL~=~0 or a mismatch
+leads to FAIL (red), a match to SUCCESS (green). PA3 returns any busy state to
+IDLE with both status LEDs off.
 
 \paragraph{Why it is non-blocking.}
-\writeup{Why no call waits for the EEPROM write cycle.}
+Each call of \reg{update\_eeprom\_state\_machine()} performs at most one SPI
+frame (at most \SI{128}{\micro\second} of clocks) and returns. While the
+EEPROM is writing, the FSM only compares \reg{HAL\_GetTick()} with the time of
+the last status check and returns if the next check is not due, so the main
+loop keeps running \reg{read\_inputs()} and PA3 is handled on the next pass.
+Every SPI frame finishes inside its own call, so an abort always leaves CS high
+and the bus idle.
 
 \paragraph{Example result.}
-$B = \text{\BHex}$ written to $A = \text{\AHex}$, read back as \fillin{0x..};
-verification \fillin{passed}.
+$B = \text{\BHex}$ written to $A = \text{\AHex}$: the write finished after
+\fillin{n} status checks while the main loop ran \fillin{N} times; read back
+as \fillin{0x..}; verification \fillin{passed}.

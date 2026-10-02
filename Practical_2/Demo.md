@@ -1,4 +1,4 @@
-# Practical 2A — Demo Guide (Tasks 1–5)
+# Practical 2A — Demo Guide (Tasks 1–6)
 
 For **Sibongokuhle (Student 1, SBYSIB014)** and **Jacob (Student 2, CHNJAC009)**.
 
@@ -42,6 +42,7 @@ Page numbers are the printed page numbers.
 | 2 | `dbg_gpiob_moder`, `dbg_gpiob_afrh`, `dbg_spi_cr1`, `dbg_spi_cr2`, `dbg_spi_sr`, `dbg_sck_hz_predicted` |
 | 3 | `task3_test_byte` (writable), `task3_rx_byte`, `task3_tx_count` |
 | 4 / 5 | `eeprom_test_addr`, `eeprom_test_byte` (both writable), `eeprom_status_before`, `eeprom_status_after`, `eeprom_read_value`, `eeprom_verify_ok`, `eeprom_write_wait_ms`, `eeprom_timeout_count`, `eeprom_read_loop_enable` (writable) |
+| 6 | `ee_state`, `ee_step_ms` (writable), `ee_poll_count`, `ee_busy_passes`, `ee_last_read`, `ee_use_fsm` (writable), plus `eeprom_verify_ok`, `eeprom_write_wait_ms` |
 
 **If every Live Expression reads 0**, including `eeprom_test_addr`, which should
 be 41, the debugger isn't looking at the running program. Usually you haven't
@@ -510,6 +511,115 @@ Fill this in once confirmed (it's also the report table):
 
 ---
 
+## Task 6 — Non-blocking state machine
+
+**What it proves:** the whole write/read/verify transaction can run *without*
+the program ever sitting in a loop waiting for the EEPROM, so the board keeps
+responding (to PA3) the whole time.
+
+### The problem with Task 4
+`eeprom_write_byte()` sends the WRITE and then **sits in a `while` loop**
+reading the status until the write finishes (~3 ms). During those 3 ms nothing
+else runs: no button checks, no LEDs, nothing. The handout forbids that in
+Task 6 (and bans `HAL_Delay` or any busy-wait for the write cycle).
+
+### The idea: a state machine
+Break the transaction into **steps** (states). Every pass of the main loop:
+
+```c
+while (1) {
+    read_inputs(now);                    // look at PA0 / PA3
+    update_eeprom_state_machine(now);    // do ONE small step, then return
+    update_outputs();                    // LEDs
+}
+```
+
+The state machine does **one small step and returns immediately**. A variable
+(`ee_state`) remembers where we are, so the next pass carries on from there.
+If the EEPROM is still busy, the step is just "is it time to check again? No →
+return." So the loop spins thousands of times while the EEPROM writes.
+
+### Our states (`Core/Src/task6_fsm.c`, `ee_state_t`)
+
+| # | State | What it does in one pass | Goes to |
+|---|---|---|---|
+| 0 | **IDLE** | Nothing. Waits for PA0. | PA0 → 1 |
+| 1 | **WRITE_PREP** (write preparation) | Checks the address is valid (0–8191). Every 1 ms reads the status: if RDY = 0 (ready) it sends **WREN**. | ready + WREN → 2; bad address or still busy after 50 ms → 7 |
+| 2 | **WRITE** (write transaction) | Reads the status to check **WEL = 1** (WREN worked), then sends **WRITE + 2 address bytes + data**. CS going high starts the write. | WEL = 1 → 3; WEL = 0 → 7 |
+| 3 | **WAIT_BUSY** (status checking) | If less than 1 ms since the last check: **return immediately**. Otherwise **one** RDSR: RDY = 0 → done. | RDY = 0 → 4; RDY = 1 → stay (check again in 1 ms); 50 ms passed → 7 |
+| 4 | **READ** (read transaction) | READ + 2 address bytes + dummy → `ee_last_read` | → 5 |
+| 5 | **VERIFY** | Compares the byte read with the byte written | match → 6; different → 7 |
+| 6 | **SUCCESS** | Green LED. Holds until the next PA0. | PA0 → 1 |
+| 7 | **FAIL** | Red LED. Holds until the next PA0. | PA0 → 1 |
+
+- **States 1–5 are "busy".** In any of them, **PA3 → IDLE** (abort), and both status LEDs go off.
+- A PA0 press while busy is **ignored**, so a second press can't start a write on top of the first.
+- The diagram is Figure 5 in the report: it shows the initial state (reset → IDLE), every transition condition, and the success, failure and abort paths.
+
+### Key design points (what the tutor will probe)
+
+| Point | Explanation |
+|---|---|
+| **One SPI frame per state** | Each state sends at most one or two complete CS-low…CS-high frames (≤ 32 clocks ≈ 128 µs). The waits inside `spi_transfer()` are for single **bits/bytes** on the SPI hardware (µs), not for the EEPROM's 3 ms write cycle. That's what the rule is about. |
+| **Waiting without blocking** | WAIT_BUSY stores `ee_last_check = now` (from `HAL_GetTick()`, 1 ms ticks). Next pass: `if (now - ee_last_check < 1 ms) return;`. The handout explicitly allows a tick to decide *when the next status check is due*. |
+| **Completion = status register** | We go to READ only when **RDY = 0** (CAT25010 p.5, p.7). The 50 ms timeout is only a hang guard (FAIL), never proof. The status is checked *before* the timeout, so a late check still counts a finished write as success. |
+| **Abort leaves the bus usable** | PA3 is checked **first** on every pass. Every SPI frame starts and ends inside one call, so between calls CS is always HIGH and the SPI is idle. An abort can never leave CS low halfway through a command. |
+| **Abort during the EEPROM's write** | The EEPROM finishes its write on its own; we can't stop it. That's why WRITE_PREP checks **RDY = 0 before sending WREN**: while busy, the EEPROM ignores everything except RDSR (CAT25010 p.7). |
+| **Address/byte latched at PA0** | `ee_addr`/`ee_data` are copied from `eeprom_test_addr`/`eeprom_test_byte` when the transaction starts, so editing them mid-transaction can't corrupt it. |
+| **Status LEDs** | Green = verified, red = failed, **both off = in progress or aborted**. At reset, the boot read result shows (TODO 6.4), so the persistence test still shows green. |
+| **PB0–7** | `update_outputs()` writes `ee_last_read` every pass with one BSRR write (PB8–15 untouched). |
+
+### Demo helpers we added
+
+| Variable (Live Expressions) | Use |
+|---|---|
+| `ee_state` | The current state number (table above) |
+| `ee_step_ms` (writable) | **Slow-motion mode.** Normally 0. A full transaction takes ~4 ms, which is far too fast to see `ee_state` change or to press PA3 in time. Set it to **1000**: every busy state then waits ≥ 1 s before doing its step, so you can watch 1 → 2 → 3 → 4 → 5 → 6 and have time to abort. It doesn't block: the FSM just keeps returning until the time has passed. |
+| `ee_poll_count` | How many status checks WAIT_BUSY made (about 3–5 at full speed) |
+| `ee_busy_passes` | **How many times the main loop ran during the transaction.** Thousands = the loop never stopped = non-blocking. |
+| `ee_use_fsm` (writable) | 1 = our FSM; 0 = the Task 4 blocking path on PA0, for comparison |
+| `ee_last_read` | Last byte read (the LEDs show it) |
+
+### What to show
+1. Set `RUN_TASK 6`, build, debug, Resume, and check that `run_task` = 6.
+2. **Normal run:** `ee_step_ms` = 0, press PA0.
+   - `ee_state` ends at **6**, green LED on, LEDs = 0x44.
+   - `ee_poll_count` ≈ 3–5, `ee_busy_passes` in the thousands.
+3. **Watch the states:** `ee_step_ms` = 1000, press PA0. `ee_state` steps 1 → 2 → 3 → 4 → 5 → 6, about once a second.
+4. **Abort:** `ee_step_ms` = 1000, press PA0, then **PA3** while `ee_state` is 1–5.
+   - `ee_state` → **0**, both status LEDs off.
+   - Press PA0 again: it runs through to 6 normally, which shows the bus was left usable.
+
+### What they will ask (handout Task 6 checkpoint)
+
+| They want | How / what to say |
+|---|---|
+| Start with PA0 | Press PA0 (step 2 above) |
+| State variable changing | `ee_step_ms` = 1000 and watch `ee_state` (step 3) |
+| Successful verification | `ee_state` = 6, green LED, `eeprom_verify_ok` = 1 |
+| Byte on the LEDs | 0x44 = `0100 0100` (PB6, PB2 on) |
+| Abort with PA3 | Step 4 |
+| **Why is it non-blocking?** | "No call ever waits for the EEPROM. Each call does at most one short SPI frame and returns. While the EEPROM writes, WAIT_BUSY only compares `HAL_GetTick()` with the last check time and returns if a check isn't due. So the main loop keeps running `read_inputs()` and PA3 is seen on the very next pass. `ee_busy_passes` proves it: thousands of loop passes during one 4 ms transaction. In the Task 4 version (`ee_use_fsm = 0`), the loop is stuck inside `eeprom_write_byte()` for the whole write." |
+
+### Curveball: "change the address or byte, rebuild, repeat"
+- **Without rebuilding:** edit `eeprom_test_addr` / `eeprom_test_byte` in Live Expressions, then press PA0.
+- **With a rebuild** (as the handout says): change the starting values at the top of `Core/Src/task4_eeprom.c`:
+  ```c
+  volatile uint16_t eeprom_test_addr = (uint16_t)EEPROM_ADDR_A;   // e.g. change to 100u
+  volatile uint8_t  eeprom_test_byte = (uint8_t)TEST_BYTE_B;      // e.g. change to 0xA5u
+  ```
+  Then rebuild, debug and press PA0.
+  - **Don't** change `STUDENT_N1/N2`: the `_Static_assert`s in `main.c` would (correctly) fail.
+  - Change the values back afterwards.
+- Valid addresses are 0–8191. An address ≥ 8192 goes to FAIL (red) by design.
+
+### Optional scope evidence (not needed for the report)
+- **Setup:** CH1 = CS (EEPROM pin 1), CH2 = SCK, trigger on **CS falling edge**, Single, about 1 ms/div. Press PA0.
+- **FSM** (`ee_use_fsm` = 1): RDSR, WREN, RDSR (WEL check), WRITE, then status checks **spaced about 1 ms apart**, with gaps where the loop is doing other work. Then READ.
+- **Task 4** (`ee_use_fsm` = 0): the status checks run **back to back** with no gaps, because the CPU is stuck in the polling loop.
+
+---
+
 ## Quick reference — numbers to know by heart
 
 | Thing | Value |
@@ -528,3 +638,5 @@ Fill this in once confirmed (it's also the report table):
 | RDY / WEL | bit 0 (1 = busy) / bit 1 |
 | Write time | 3 ms (max 5 ms) |
 | Clocks | RDSR 16, WREN 8, WRITE 32, READ 32 |
+| FSM states | 0 IDLE, 1 WRITE_PREP, 2 WRITE, 3 WAIT_BUSY, 4 READ, 5 VERIFY, 6 SUCCESS, 7 FAIL |
+| FSM poll interval / timeout | 1 ms / 50 ms |
