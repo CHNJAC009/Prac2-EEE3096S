@@ -114,6 +114,7 @@ registers through pointers, with no HAL.
 | GPIOC_MODER | GPIOC = 0x4800 0800 | 0x00 | 0x4800 0800 | RM0091 Table 1 p.48; §8.4.1 p.157 |
 | GPIOC_ODR | GPIOC | 0x14 | 0x4800 0814 | RM0091 §8.4.6 p.159 |
 | GPIOC_BSRR | GPIOC | 0x18 | 0x4800 0818 | RM0091 §8.4.7 p.159 |
+| GPIOC_BRR | GPIOC | 0x28 | 0x4800 0828 | RM0091 §8.4.11 p.162 |
 
 The `_Static_assert` lines compare our addresses with ST's header file. If one
 is wrong, the build fails.
@@ -136,9 +137,25 @@ the pin hardware.
 | `*pGPIO_MODER \|= (1UL << 26);` | Sets them to `01` = general-purpose output (RM0091 §8.4.1). |
 | `*pGPIO_BSRR = (1UL << 13);` | Drives PC13 HIGH as the starting level. Writing 1 to BSRR bit 13 *sets* pin 13. The 0s written to the other bits do nothing, so a plain `=` is safe. |
 
-**4. `task1_gpio_update()`.** Every `task1_half_period_ms` (5 ms) it runs
-`*pGPIO_ODR ^= (1UL << 13);`. XOR with 1 flips bit 13, so it reads the current
-level and writes the opposite.
+**4. `task1_gpio_update()`.** Every `task1_half_period_ms` (5 ms) it toggles
+PC13 in two steps:
+
+```c
+if (*pGPIO_ODR & (1UL << 13))      // read: is PC13 HIGH right now?
+    *pGPIO_BRR  = (1UL << 13);     // yes -> BR13: drive it LOW
+else
+    *pGPIO_BSRR = (1UL << 13);     // no  -> BS13: drive it HIGH
+```
+
+| Step | What it does |
+|---|---|
+| `*pGPIO_ODR & (1UL << 13)` | **Reads** ODR and keeps only bit 13. Non-zero = the pin is being driven high (RM0091 §8.4.6 p.159). It only reads; nothing is written to ODR. |
+| `*pGPIO_BRR = (1UL << 13)` | BRR is **reset-only**: a 1 in bit 13 drives PC13 LOW. 0s do nothing (RM0091 §8.4.11 p.162). |
+| `*pGPIO_BSRR = (1UL << 13)` | BSRR bits 15:0 are **set-only**: a 1 in bit 13 drives PC13 HIGH. 0s do nothing (RM0091 §8.4.7 p.159). |
+
+Because BSRR and BRR ignore 0 bits, a plain `=` changes **only** PC13. No
+read-modify-write of the output register is needed, so the other GPIOC pins
+can't be disturbed.
 
 **Measured:** period 9.93 ms (≈ 100.7 Hz), because each half period is 5 ms.
 
@@ -152,11 +169,12 @@ level and writes the opposite.
 
 | Question | Answer |
 |---|---|
-| **Show the register writes** | Point to the four lines in `task1_gpio_init()` and the XOR line above. |
+| **Show the register writes** | Point to the four lines in `task1_gpio_init()` and the ODR-read → BRR/BSRR toggle above. |
 | **Derive an address from base + offset** | "GPIOC is at 0x4800 0800 in the memory map (RM0091 Table 1, p.48). ODR is at offset 0x14 in the GPIO register map (§8.4.6). 0x4800 0800 + 0x14 = 0x4800 0814." |
-| **What if the GPIO clock were disabled?** | "GPIOC gets no clock, so its registers don't work: our MODER and ODR writes are ignored. RM0091 §6.4.6 p.120 says register values *'may not be readable by software and the returned value is always 0x0'*. PC13 stays in its reset state (input), so there is no square wave." |
+| **What if the GPIO clock were disabled?** | "GPIOC gets no clock, so its registers don't work: our MODER, BSRR and BRR writes are ignored and reading ODR gives 0. RM0091 §6.4.6 p.120 says register values *'may not be readable by software and the returned value is always 0x0'*. PC13 stays in its reset state (input), so there is no square wave." |
 | **What does `volatile` do?** | "It tells the compiler this memory can change outside the program (it's hardware), so it must really read or write it every time the code says so. Without it, the compiler could remove 'pointless' writes or keep an old value in a CPU register. For example, a loop polling a status flag could read the flag only once and spin forever." |
-| **Why ODR for the toggle and BSRR for the start level?** | "To toggle, I need the current level, so I use ODR with XOR. For the start level I just want 'high', so I use BSRR, which sets the pin in one write without disturbing other pins." |
+| **Why read ODR, then write BSRR or BRR?** (TODO 1.8 asks why we chose that register) | "To toggle, I need the current level, so I **read** ODR bit 13. Then I write the opposite level with BRR (reset) or BSRR (set). Those registers only act on bits written as 1, so one `=` write changes PC13 and nothing else. The alternative, `ODR ^= (1UL << 13)`, is a read-modify-write of the whole output register. That works here, but if something else (e.g. an interrupt) changed another GPIOC pin between the read and the write, ODR would overwrite that change. BSRR and BRR can't do that." |
+| **Why BSRR for the start level?** | "I just want 'high', so one BSRR write sets PC13 without touching the other pins." |
 
 ### Curveball: "move the output to another free pin"
 
@@ -176,10 +194,10 @@ Say pin *n* on port X:
 
    The offsets stay the same, because every GPIO port has the same register map.
 3. **MODER:** clear `(3UL << 2n)`, then set `(1UL << 2n)`.
-4. **ODR / BSRR:** use bit `n`, i.e. `(1UL << n)`.
+4. **ODR / BSRR / BRR:** use bit `n`, i.e. `(1UL << n)`.
 
 Example on the same port, PC13 → PC14: MODER bits 29:28 (`3UL << 28` /
-`1UL << 28`), ODR/BSRR bit 14. Check `Board.md` that the pin is actually free first.
+`1UL << 28`), ODR/BSRR/BRR bit 14. Check `Board.md` that the pin is actually free first.
 
 ---
 

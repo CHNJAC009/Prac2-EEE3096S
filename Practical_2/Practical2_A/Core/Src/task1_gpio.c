@@ -104,7 +104,20 @@ void task1_gpio_update(uint32_t now)
     /* TODO 1.8  Toggle PC13: read its present level, then drive the opposite
      *           level. There are set-only and reset-only registers as well as
      *           ODR - be ready to say why you chose the one you used. */
-    *pGPIO_ODR ^= (1UL << 13); // toggle PC13
+    /* Read the present level from ODR13 (RM0091 §8.4.6 GPIOx_ODR, p.159),
+     * then drive the opposite level with a set-only or reset-only write.
+     * (1UL << 13) same as GPIO_ODR_13 / GPIO_BRR_BR_13 / GPIO_BSRR_BS_13 masks. */
+    if (*pGPIO_ODR & (1UL << 13))           // PC13 currently HIGH?
+    {
+        *pGPIO_BRR = (1UL << 13);           // BR13 = 1: reset PC13 -> LOW  (RM0091 §8.4.11 GPIOx_BRR, p.162)
+    }
+    else                                    // PC13 currently LOW
+    {
+        *pGPIO_BSRR = (1UL << 13);          // BS13 = 1: set PC13 -> HIGH (RM0091 §8.4.7 GPIOx_BSRR, p.159)
+    }
+    /* BSRR/BRR only change the pins whose bit is 1; writing 0 to the other
+     * bits has no effect, so '=' never disturbs the other GPIOC pins and no
+     * read-modify-write of the output register is needed. */
     task1_toggle_count++;
 }
 

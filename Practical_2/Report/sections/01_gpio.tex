@@ -23,6 +23,7 @@ address $A = B + O$ (\cref{tab:gpio-addr}), with the masks in \cref{tab:gpio-mas
     \reg{GPIOC\_MODER} & \texttt{0x4800 0800} & \texttt{0x00} & \texttt{0x4800 0800} & \cite[Tab.~1, \S8.4.1]{rm0091} \\
     \reg{GPIOC\_ODR}   & \texttt{0x4800 0800} & \texttt{0x14} & \texttt{0x4800 0814} & \cite[Tab.~1, \S8.4.6]{rm0091} \\
     \reg{GPIOC\_BSRR}  & \texttt{0x4800 0800} & \texttt{0x18} & \texttt{0x4800 0818} & \cite[Tab.~1, \S8.4.7]{rm0091} \\
+    \reg{GPIOC\_BRR}   & \texttt{0x4800 0800} & \texttt{0x28} & \texttt{0x4800 0828} & \cite[Tab.~1, \S8.4.11]{rm0091} \\
     \bottomrule
   \end{tabular}
 \end{table}
@@ -40,7 +41,9 @@ address $A = B + O$ (\cref{tab:gpio-addr}), with the masks in \cref{tab:gpio-mas
     \reg{GPIOC\_MODER} & MODER13 (bits 27:26), clear    & \texttt{(3 << 26)}   & \texttt{\&= \textasciitilde} \\
     \reg{GPIOC\_MODER} & MODER13 = \texttt{01} (output) & \texttt{(1UL << 26)} & \texttt{|=} \\
     \reg{GPIOC\_BSRR}  & BS13 (bit 13), start high      & \texttt{(1UL << 13)} & \texttt{=} \\
-    \reg{GPIOC\_ODR}   & ODR13 (bit 13), toggle         & \texttt{(1UL << 13)} & \texttt{\^{}=} \\
+    \reg{GPIOC\_ODR}   & ODR13 (bit 13), read level     & \texttt{(1UL << 13)} & \texttt{\&} (test) \\
+    \reg{GPIOC\_BRR}   & BR13 (bit 13), if high: low    & \texttt{(1UL << 13)} & \texttt{=} \\
+    \reg{GPIOC\_BSRR}  & BS13 (bit 13), if low: high    & \texttt{(1UL << 13)} & \texttt{=} \\
     \bottomrule
   \end{tabular}
 \end{table}
@@ -49,7 +52,8 @@ address $A = B + O$ (\cref{tab:gpio-addr}), with the masks in \cref{tab:gpio-mas
 A peripheral register can change, or react to being accessed, independently of
 the program flow. \texttt{volatile} forces the compiler to perform every read and
 write exactly as written instead of caching the value or removing accesses it
-considers redundant; without it, the writes to ODR could be optimised away.
+considers redundant; without it, the read of ODR could be cached and the
+BSRR/BRR writes optimised away.
 
 \scopefig{task1_pc13.jpeg}{PC13 square wave (\reg{task1\_half\_period\_ms} $=$ 5~ms):
   measured period 9.928~ms, frequency 100.73~Hz.}{fig:task1}
