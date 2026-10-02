@@ -80,8 +80,8 @@ SPI is a 4-wire bus with one **master** (our STM32) and one **slave** (the EEPRO
   edge is where the sender **changes** the data line. The data must be
   **stable** at the sampling edge.
 - **CPOL and CPHA** (in `SPI_CR1`) pick which is which:
-  - **CPOL** = the level SCK sits at when idle (0 = low, 1 = high).
-  - **CPHA** = which clock edge samples the data (0 = first edge, 1 = second edge).
+  - **C**lock**POL**arity = the level SCK sits at when idle (0 = low, 1 = high).
+  - **C**lock**PHA**se = which clock edge samples the data (0 = first edge, 1 = second edge).
 - **What we use:** CPOL = 0, CPHA = 0, called **mode 0**. SCK idles low, data
   is sampled on each **rising** edge and changes on each **falling** edge:
 
@@ -213,8 +213,8 @@ register. No HAL, no CubeMX.
 | SPI instance | **SPI2** at 0x4000 3800 | Datasheet Table 15 p.38 (PB12–15 = SPI2 on AF0); RM0091 Table 1 p.48 |
 | Pin mapping | PB12 CS, PB13 SCK, PB14 MISO, PB15 MOSI | README §5.1 (the handout's table is wrong). **We confirmed it with a continuity test.** |
 | Alternate function | **AF0** on PB13/14/15 | Datasheet Table 15 p.38 |
-| Peripheral clock | **PCLK = 8 MHz** | `SystemClock_Config()` uses HSI 8 MHz with no PLL, AHB ÷1, APB ÷1 (RM0091 §6.2 p.95–96, §6.4.2) |
-| Divider | **BR = 100 (4)** → ÷32 | RM0091 §28.9.1 p.802 |
+| Peripheral clock | **PCLK = 8 MHz** | `SystemClock_Config()` uses HSI 8 MHz with no PLL(clock multiplier), AHB ÷1, APB ÷1 (RM0091 §6.2 p.95–96, §6.4.2) |
+| Divider | **BR = 100 (4)** → ÷32 | RM0091 §28.9.1 p.802, BR[2:0] on SPIx_CR1: Baud rate control |
 | Predicted SCK | **8 MHz / 32 = 250 kHz** | f_SCK = f_PCLK / 2^(BR+1) = 8 000 000 / 2^5 |
 | CPOL / CPHA | **0 / 0** (mode 0) | CAT25010 p.5 (see "SPI in one page") |
 | Bit order | **MSB first** | CAT25010 Figures 3 and 5, p.6–7 |
@@ -230,7 +230,7 @@ on PB12–15 (Datasheet Table 15).
 | 2.5 CS | `BSRR = EE_CS_MASK` **first**, then MODER12 = `01` (output) | Sets the level to HIGH *before* making the pin an output, so CS never glitches low. CS is active-low, so high = EEPROM ignores the bus. |
 | 2.6 AF pins | MODER = `10` (alternate function) on PB13/14/15; AFRH = 0 (AF0) | MODER says "a peripheral drives this pin"; AFRH says *which* one. `AFR[1]` = AFRH, the register for pins 8–15 (AFR[0] is pins 0–7). 4 bits per pin. |
 | 2.7 speed / pull-up | OSPEEDR = `11` on SCK and MOSI; PUPDR = `01` pull-up on MISO | While CS is high the EEPROM's output is **tri-stated** (not driving at all; CAT25010 p.5). The pull-up holds MISO at 1 instead of floating, so an idle read gives **0xFF**. |
-| 2.8 CR2 = **0x1700** | FRXTH = 1 (bit 12), DS = 0111 (bits 11:8) = 8-bit frames | FRXTH makes RXNE ("byte received") go high after **8** bits. The default waits for 16 bits, so a single-byte transfer would wait forever. |
+| 2.8 CR2 = **0x1700** | FRXTH = 1 (bit 12), DS = 0111 (bits 11:8) = 8-bit frames | In the demo: "FRXTH is the FIFO reception threshold. Setting it to 1 makes RXNE fire after 8 bits instead of 16. Our transfers are single bytes, so without it RXNE never sets and the transfer hangs. DS is the data size, 0111 selects 8-bit frames, so each transfer is 8 SCK pulses, matching the EEPROM's 8-bit opcodes, addresses and data." |
 | 2.9 CR1 = **0x0324** | SSM = 1, SSI = 1, LSBFIRST = 0, BR = 100, MSTR = 1, CPOL = 0, CPHA = 0 | See the field table below |
 | 2.10 enable | `CR1 \|= (1UL << 6)` (SPE) → CR1 = **0x0364** | Configure first, enable last (RM0091 §28.5.7–28.5.8 p.765–766). Nothing is sent until DR is written. |
 
@@ -366,6 +366,17 @@ A = (n1 + 3·n2) mod 256 = (14 + 27) mod 256 = 41 = 0x29
 ```
 
 ### The EEPROM facts (CAT25010)
+
+**What each opcode means** (CAT25010 Table 9, p.5). The opcode is the first byte sent after CS goes low, and it tells the EEPROM what to do:
+
+| Opcode | Name | Simple meaning | We use it? |
+|---|---|---|---|
+| 0x06 | **WREN**, Write ENable | "Allow writing." Sets the WEL latch, but only once CS goes high afterwards. Needed before every write. | Yes, before each WRITE |
+| 0x04 | **WRDI**, Write DIsable | "Block writing." Clears WEL. | No (WEL clears itself after a write) |
+| 0x05 | **RDSR**, ReaD Status Register | "Send me your status byte" (RDY = busy?, WEL = write-enabled?) | Yes, before/after writes and to poll for completion |
+| 0x01 | **WRSR**, WRite Status Register | "Change your status byte," i.e. the block-protect bits BP1:BP0 | No (only used once to clear Jacob's board's protection) |
+| 0x03 | **READ** | "Send me the byte stored at this address" (then 2 address bytes, then a dummy byte to clock the data out) | Yes, read-back |
+| 0x02 | **WRITE** | "Store this byte at this address" (then 2 address bytes, then the data). Needs WEL = 1. The write starts when CS goes high. | Yes, the write |
 
 | Item | Value | Where |
 |---|---|---|
