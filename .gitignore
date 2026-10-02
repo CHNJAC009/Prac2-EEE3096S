@@ -30,6 +30,8 @@ objects.mk
 RemoteSystemsTempFiles/
 # duplicate launch configs the IDE creates, e.g. "Practical2_A Debug (1).launch"
 *\(*\).launch
+# Jacob's personal debug config (machine/board-specific)
+/Practical_2/Practical2_A/Practical_2A Default.launch
 
 # ---- Editors / OS ---------------------------------------------------------
 .vscode/*
