@@ -28,7 +28,7 @@
 
 #include "prac2a.h"
 
-#define RUN_TASK    4
+#define RUN_TASK    6
 
 volatile uint8_t run_task = RUN_TASK;
 
