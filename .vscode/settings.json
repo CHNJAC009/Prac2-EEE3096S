@@ -29,6 +29,7 @@
     // Always build the whole report, even when saving a file in sections/.
     "latex-workshop.latex.rootFile.useSubFile": false,
     "latex-workshop.latex.search.rootFiles.include": [
-        "Practical_2/Report/main.tex"
+        "Practical_2/Report/main.tex",
+        "Practical_3/Report/report.tex"
     ]
 }
