@@ -1,8 +1,5 @@
-% EEE3096S Practical 3: replace every blank with your own measured results.
-% Place full12.png and coarse6.png alongside this file, or in docs/ when
-% compiling from the practical root. Missing images produce safe placeholders.
-% Compile from this directory: latexmk -pdf report.tex (output in build/)
-% Keep this report to the measurements, two captures, and one page of explanation.
+% EEE3096S Practical 3 report. Compile from this directory: latexmk -pdf report.tex
+% The scope captures full12.jpg and coarse6.jpg sit beside this file.
 \documentclass[11pt,a4paper]{article}
 \usepackage{lmodern}
 \usepackage[margin=20mm]{geometry}
@@ -15,101 +12,100 @@
 \setlength{\parskip}{5pt}
 \renewcommand{\arraystretch}{1.4}
 \newcommand{\blank}[1][27mm]{\rule{#1}{0.4pt}}
-\newcommand{\captureplaceholder}[2]{%
-  \fbox{\parbox[c][0.26\textheight][c]{\dimexpr\linewidth-2\fboxsep-2\fboxrule\relax}{%
-    \centering #2\par\medskip
-    Replace with your own oscilloscope capture.\par
-    Save it as \texttt{\detokenize{#1}}.}}}
-\newcommand{\capture}[2]{%
-  \IfFileExists{#1}{%
-    \includegraphics[width=\linewidth,height=0.26\textheight,keepaspectratio]{#1}}{%
-    \IfFileExists{docs/#1}{%
-      \includegraphics[width=\linewidth,height=0.26\textheight,keepaspectratio]{docs/#1}}{%
-      \captureplaceholder{#1}{#2}}}}
+\newcommand{\capture}[1]{%
+  \includegraphics[width=\linewidth,height=0.26\textheight,keepaspectratio]{#1}}
 
 \begin{document}
 \begin{center}
-  {\Large\bfseries EEE3096S Practical 3 --- Voltage Mirror}\par
-  Student report template
+  {\Large\bfseries EEE3096S Practical 3 --- Voltage Mirror}
 \end{center}
-Names/student numbers: \blank[105mm]\par
-Date: \blank[35mm]\qquad Build configuration: \blank[45mm]
+Names/student numbers: CHNJAC009 & SBYSIB014\par
+Date: 23 October 2026\qquad Build configuration: -O0
 
-\textbf{Assessment: live demonstration 80 marks; report 20 marks.}
-Enter your own measurements. Suggested input levels are setup targets, not results.
-Submit the four completed functions with this report.
-
-\section*{1. Measurements and predictions (8 report marks)}
+\section*{1. Measurements and predictions}
 Measured analogue reference $V_R$: 3.2946~V\par
 DMM range/resolution: 10~V DC range, 5 significant figures (0.1~mV resolution)\par
 Nominal ADC/DAC interval $V_R/4096$: $3.2946/4096 = 0.8043$~mV\par
 Predicted coarse output step $V_R/64$: $3.2946/64 = 51.48$~mV
-
-Measure PA5 and PA4 independently with the DMM. Record the actual LCD codes.
-Calculate the nominal DAC output $D V_R/4096$ from each recorded command.
 
 {\small
 \begin{tabularx}{\linewidth}{@{}l l X r r X X@{}}
 \toprule
 Input target & Mode & Measured PA5 (V) & $C$ & $D$ & Predicted PA4 (V) & Measured PA4 (V) \\
 \midrule
-$\sim$0.800 V & FULL12  & & & & & \\
-$\sim$0.800 V & COARSE6 & & & & & \\
-$\sim$1.650 V & FULL12  & & & & & \\
-$\sim$1.650 V & COARSE6 & & & & & \\
-$\sim$2.500 V & FULL12  & & & & & \\
-$\sim$2.500 V & COARSE6 & & & & & \\
+% Predicted PA4 = D x 3.2946 / 4096, using the D recorded in each row.
+$\sim$0.800 V & FULL12  & 0.79955 & 992 & 992 & 0.7979 & 0.80163\\
+$\sim$0.800 V & COARSE6 & 0.79955 & 992& 960 & 0.7722 & 0.77765\\
+$\sim$1.65 V & FULL12  & 1.6528 & 2045 & 2045 & 1.6449 & 1.6536\\
+$\sim$1.65 V & COARSE6 & 1.6528 & 2053 & 2048 & 1.6473 & 1.6536\\
+$\sim$2.500 V & FULL12  & 2.5040 & 3113 & 3113& 2.5039 & 2.4753\\
+$\sim$2.500 V & COARSE6 & 2.5040 & 3116 & 3072 & 2.4710 & 2.4753\\
 \bottomrule
 \end{tabularx}}
 
-Generator: \blank[18mm]\ Hz; \blank[18mm]\ Vpp; \blank[18mm]\ V offset\par
-Verified PA5 minimum/maximum: \blank\ / \blank\ V\par
-Measured adjacent coarse step: \blank\ mV\par
-Measured minus predicted step: \blank\ mV\par
+Generator: 1.996 Hz; 1.77 Vpp; 1.787 V offset\par
+Verified PA5 minimum/maximum: 0.9 / 2.67 V\par
+Measured adjacent coarse step: 51.25 mV (average over six steps)\par
+Measured minus predicted step: $51.25 - 51.48 = -0.23$~mV\par
 Percentage difference $100(\Delta V_{\rm measured}-\Delta V_{\rm predicted})/
-\Delta V_{\rm predicted}$: \blank[18mm]\ \%
+\Delta V_{\rm predicted}$: $-0.44$~\%
 
 \newpage
-\section*{2. Two real scope captures (6 report marks)}
-Label PA5 input and PA4 output, modes, voltage scales and time scales.
-Use your own captures; simulated illustrations are not experimental evidence.
+\section*{2. Scope captures}
 
 \begin{center}
-\capture{full12.png}{FULL12: input and output over approximately one triangle cycle}
+\capture{full12.jpg}
 \end{center}
-\textbf{Capture 1 --- FULL12.} Show both traces over approximately one cycle.
-The small individual 12-bit steps need not be resolved.
+\textbf{Capture 1 --- FULL12.} CH1 = PA5 input, CH2 = PA4 output, both
+500~mV/div, DC coupled; 50~ms/div (zoomed window of the 100~ms/div main
+timebase). The PA4 trace lies on top of PA5 over the whole cycle
+(PA5: 0.90--2.67~V, 1.998~Hz).
 
 \begin{center}
-\capture{coarse6.png}{COARSE6: adjacent settled plateaus and voltage cursors}
+\capture{coarse6.jpg}
 \end{center}
-\textbf{Capture 2 --- COARSE6.} Show both channels, adjacent settled output
-plateaus and the cursor measurement used for your step comparison.
+\textbf{Capture 2 --- COARSE6.} CH1 = PA5 input (yellow), CH2 = PA4 output
+(green), both 50~mV/div, DC coupled; 10~ms/div, rising ramp. PA4 is a
+staircase of plateaus below the input ramp; the average spacing of adjacent
+settled plateaus over six steps is 51.25~mV.
 
 \newpage
-\section*{3. Explanation (6 report marks; at most one page)}
-Replace the prompts and blank spaces with concise answers supported by your
-measurements. Keep the whole written explanation on this page.
+\section*{3. Explanation}
+\textbf{Mapping.} FULL12 copies the full 12-bit code, $D = C$, so all 4096 commands
+are available. COARSE6 limits resolution by clearing the six least significant bits,
+$D = C \mathbin{\&} \mathtt{0b111111000000} = 64\lfloor C/64\rfloor$ This gives us $4096/64 = 64$ distinct commands
+(0, 64, \dots, 4032) spaced 64 codes apart, or \ $V_R/64 =
+51.48$~mV at the output. The largest is 4032 since the next multiple of 64, 4096, needs a 13th bit. Because
+bits are cleared, COARSE6 always rounds down ($D \le C$), so the output sits
+0--63~LSB (0--51~mV) below the input, as the staircase in Capture~2 shows.
+The ADC and DAC both remain 12-bit; only the software mapping removes the
+six bits, giving an effective 6-bit resolution.
 
-\textbf{Mapping.} State your FULL12 and COARSE6 relationships. How many distinct
-coarse commands exist, what is their spacing, and why is the maximum 4032?
-\vspace{18mm}
+\textbf{Measured steps.} The measured step of 51.25~mV, which we averaged over six
+adjacent plateaus, is 0.23~mV ($-0.44$\,\%) below the prediction
+$51.48$~mV. This difference is within the expected measurement
+uncertainty, which comes mainly from noise on the plateaus, cursor placement
+and the scope's limited vertical resolution, so the measured step agrees with
+$V_R/64$.
 
-\textbf{Measured steps.} Compare the measured coarse step with $V_R/64$.
-Use your readings and instrument limits to discuss any difference.
-\vspace{18mm}
+\textbf{Resolution and accuracy.} The FULL12 trace in Capture~1 only
+\emph{looks} smooth. The DAC still outputs discrete codes, updated every
+0.5~ms, so PA4 is a staircase of steps of about 3.5~mV on this triangle. These
+steps are too small to see at 500~mV/div, so a smooth trace shows only that
+the steps are below the scope's resolution, not that the output is continuous.
 
-\textbf{Resolution and accuracy.} Explain why a smooth FULL12 trace does not
-establish continuous voltage resolution, and why 12-bit resolution does not
-guarantee voltage accuracy. Both hardware converters stay at 12 bits.
-\vspace{18mm}
+\emph{Resolution} is the smallest output step: 0.80~mV in FULL12 and
+51.48~mV in COARSE6. \emph{Accuracy} is how close the output is to the true
+value, and is set by the converters' offset, gain and linearity errors and by
+noise, not by the number of bits. Our FULL12 outputs at 0.8~V and 1.65~V are
+3.7--8.7~mV or 5--11~LSB from their predicted voltages, an error of about
+0.5\,\%; that is to say, the conversion is fairly accurate.
 
-\textbf{One DC result.} Compare $C V_R/4096$ with measured input, and
-$D V_R/4096$ with measured output. Explain why copying the code does not
-guarantee identical physical voltages.
-\vspace{18mm}
-
-\textit{Live demonstration: prepare all three DC levels; show one safe
-tutor-selected input and both triangle modes. Explain the actual codes,
-$V_R/64$ step prediction, ADC/DAC register fields, bounded wait and W1C flags.}
+\textbf{One DC result (0.8~V, FULL12).} With $C = 992$, the ADC estimate
+$C V_R/4096 = 0.7979$~V is 1.6~mV ($\approx 2$~LSB) below the measured input
+0.7996~V. With $D = C = 992$, the nominal DAC output $D V_R/4096 = 0.7979$~V
+is 3.7~mV ($\approx 5$~LSB) below the measured output 0.8016~V, so the output
+is 2.1~mV above the input. Copying the code is exact only digitally: the ADC
+has its own offset, gain and linearity error, the DAC has independent errors, and noise makes $C$ vary
+by a few LSB.
 \end{document}
